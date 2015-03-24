@@ -1,0 +1,18 @@
+{
+    "name": "hl222ih/1dv402",
+    "version": "0.0.0",
+    "description": "1dv402",
+    "minimum-stability": "stable",
+    "license": "proprietary",
+    "private": true,
+    "authors": [
+        {
+            "name": "hl222ih",
+            "email": "hl222ih@student.lnu.se"
+        }
+    ],
+    "dependencies": {
+        "polymer": "Polymer/polymer~0.5.5",
+        "core-elements": "Polymer/core-elements"
+    }
+}
