@@ -2,26 +2,17 @@
 <html>
 <head lang="en">
     <meta charset="UTF-8">
-    <title></title>
+    <!--load web components before importing html-->
+    <script src="bower_components/webcomponentsjs/webcomponents.js"></script>
+    <link rel="import" href="elements/one-week.html"/>
+    <title>Schedule</title>
 </head>
 <body>
     Hello world!
-    <script src="bower_components/webcomponentsjs/webcomponents.min.js"></script>
+    <one-week></one-week>
+    <script src="scripts/app.js"></script>
     <script>
-        window.onload = function () {
-            var squares = [
-                { pos: 'top-left', text: 'hus, byggnad ha', file: 'house,building,dwelling,residence' },
-                { pos: 'top-right', text: 'lägenhet', file: 'apartment,flat,unit' },
-                { pos: 'bottom-left', text: 'hus, byggnad ha', file: 'house,building,dwelling,residence' },
-                { pos: 'bottom-right', text: 'lägenhet', file: 'apartment,flat,unit' }
-            ];
-            //var squareElems = document.querySelector("bliss-group#page1");
-            //var squareElems = document.querySelectorAll("bliss-group#page1");
-            //for (var i=0; i < squareElems.length; i++) {
-            //    squareElems[i].squares = JSON.parse(JSON.stringify(squares));
-            //};
-            alert("hello world");
-        };
+        window.onload = function () {};
     </script>
 </body>
 </html>
