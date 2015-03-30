@@ -1,5 +1,34 @@
 div {
-    height: 100px;
-    width: 100px;
-    background-color: red;
+    padding: 0;
+    margin: 0;
+}
+
+svg {
+    display: block; /* avoid extra space under svg as inline element */
+}
+
+#weekSchedule {
+    position: absolute;
+}
+
+#weekScheduleOverlay {
+    position: absolute;
+}
+
+#day1Schedule {
+    position: absolute;
+    left: 0;
+    box-sizing: border-box;
+}
+
+#day2Schedule {
+    position: absolute;
+    left: 60px;
+    box-sizing: border-box;
+}
+
+#day3pt1Schedule {
+    position: absolute;
+    left: 120px;
+    box-sizing: border-box;
 }

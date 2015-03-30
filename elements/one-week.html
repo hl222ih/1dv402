@@ -1,13 +1,109 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="one-shift.html"/>
 
-<polymer-element name="one-week">
+<polymer-element name="one-week" attributes="scheduleData weekNumber layout">
     <template>
         <link rel="stylesheet" href="one-week.css" type="text/css">
-        <div></div>
+        <div id="weekSchedule" draggable="false">
+            <div id="day1Schedule" draggable="true"></div>
+            <div id="day2Schedule" draggable="true"></div>
+            <div id="day3pt1Schedule" draggable="true"></div>
+            <template repeat="{{s in shifts}}">
+                <one-shift shiftData={{s}} />
+            </template>
+        </div>
+        <div id="weekScheduleOverlay" draggable="false"></div>
     </template>
     <script>
         Polymer('one-week', {
+            shifts: [{
+                dayOfWeek: 1,
+                bgColor: '#ffcc66',
+                color: 'black',
+                workPlaceCode: "Tg.",
+                employeeCode: "RR",
+                shiftCode: "A2",
+                startTime: 420,
+                endTime: 1020,
+                week: 2,
+                repeatWeek: 2
+            },
+            {
+                dayOfWeek: 3,
+                bgColor: '#ffcc66',
+                color: 'black',
+                workPlaceCode: "Tg.",
+                employeeCode: "RR",
+                shiftCode: "A1",
+                startTime: 420,
+                endTime: 960,
+                week: 2,
+                repeatWeek: 2
+            }],
+            pxWidth: 420,
+            pxHeight: 288,
+            strokeWidth: 1, //1-3, flaw for bigger?
+            renderSchedule: function() {
+
+                var pxWidth = this.pxWidth;
+                var pxHeight = this.pxHeight;
+                var strokeWidth = this.strokeWidth;
+                var width = pxWidth * 5;
+                var height = pxHeight * 5;
+                var minuteHeight = height / 1440;
+                var horizontalMargin = strokeWidth / 2 + width / pxWidth;
+                var verticalMargin = strokeWidth / 2 + height / pxHeight;
+                var extraPixelWidth = width / pxWidth;
+                var extraPixelHeight = height / pxHeight;
+                var fullWidth = width + extraPixelWidth * 2;
+                var fullHeight = height + extraPixelHeight * 2;
+                var dayWidth = (width - strokeWidth)/ 7;
+                SVG(this.$.weekSchedule).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(0, 0, width, height).attr({ fill: '#222'});
+
+                var draw = SVG(this.$.weekScheduleOverlay).fixSubPixelOffset().size(pxWidth+2,pxHeight+2).viewbox(0,0,fullWidth,fullHeight).attr({ fill: 'none', 'stroke-width': strokeWidth, stroke: 'blue'});
+                var path = '' +
+                            //between days lines
+                        'M ' + (dayWidth + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 2 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 3 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 4 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 5 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 6 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
+                            //border line
+                        'M ' + horizontalMargin + ' ' + verticalMargin + ' l ' + (width) + ' 0 0 ' + (height) + ' -' + (width) + ' 0 0 -' + (height) + 'Z ';
+                //hour markers
+                for (var hour = 1; hour <= 23; hour++) {
+                    for (var day = 1; day <= 7; day++) {
+                        path += 'M ' + (horizontalMargin + (day - 1) * dayWidth) + ' ' + (verticalMargin + hour * 60 * minuteHeight) + ' l ' + (dayWidth / 40) + ' 0 ';
+                        path += 'M ' + (horizontalMargin + day * dayWidth - dayWidth / 40) + ' ' + (verticalMargin + hour * 60 * minuteHeight) + ' l ' + (dayWidth / 40) + ' 0 ';
+                    }
+                }
+                draw.path(path);
+            },
             ready: function() {
+                this.style.display = "block";
+                this.style.position = "absolute";
+                this.style.width = this.pxWidth + 'px';
+                this.style.height = this.pxHeight + 'px';
+            },
+            domReady: function() {
+                this.$.weekScheduleOverlay.style.left = (this.weekNumber * 30) + "px";
+                this.$.weekScheduleOverlay.style.top = (this.weekNumber * 30) + "px";
+                this.$.weekSchedule.style.top = (this.weekNumber * 30) + "px";
+                this.$.weekSchedule.style.left = (this.weekNumber * 30) + "px";
+                this.renderSchedule();
+                this.shifts.push({
+                    dayOfWeek: 6,
+                    bgColor: '#ffcc66',
+                    color: 'black',
+                    workPlaceCode: "Tg.",
+                    employeeCode: "RR",
+                    shiftCode: "A2",
+                    startTime: 450,
+                    endTime: 960,
+                    week: 2,
+                    repeatWeek: 2
+                });
             }
         });
     </script>

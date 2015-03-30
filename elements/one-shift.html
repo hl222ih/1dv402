@@ -1,0 +1,101 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+<polymer-element name="one-shift" attributes="shiftData">
+    <template>
+        <link rel="stylesheet" href="one-shift.css" type="text/css">
+        <div id="shift"></div>
+    </template>
+    <script>
+        var minutesToHHMMString = function(minutes) {
+            var MINUTES_IN_AN_HOUR = 60;
+            var HHMMString = "";
+            var minutes = parseInt(minutes, 10); //make sure integer
+            var hourPart = Math.floor(minutes / MINUTES_IN_AN_HOUR); //truncate due to no integer division in javascript
+            var minutePart = minutes % MINUTES_IN_AN_HOUR; //modulus go get hours
+
+            if (hourPart < 10) //add leading zero if necessary
+                hourPart = "0" + hourPart;
+            if (minutePart < 10 )
+                minutePart = "0" + minutePart;
+
+            HHMMString = hourPart + ":" + minutePart; //format as "HH:MM" string
+            return HHMMString;
+        };
+
+        Polymer('one-shift', {
+            workPlaceCode: "",
+            employeeCode: "",
+            startTime: 0,
+            endTime: 0,
+            week: null,
+            repeatWeek: null,
+            calcMinutes: function() {
+                var minutes = 0;
+                if (this.startTime >= this.endTime)
+                    minutes += 24*60;
+                minutes += this.endTime - this.startTime;
+                return minutes;
+            },
+            displayStartTime: function () {
+                return minutesToHHMMString(this.startTime);
+            },
+            displayEndTime: function () {
+                return minutesToHHMMString(this.endTime);
+            },
+            ready: function() {
+                this.bgColor = this.shiftData.bgColor;
+                this.color = this.shiftData.color;
+                this.startTime = this.shiftData.startTime;
+                this.endTime = this.shiftData.endTime;
+                this.dayOfWeek = this.shiftData.dayOfWeek;
+            },
+            domReady: function() {
+                const DAYS_IN_A_WEEK = 7;
+                const MINUTES_IN_A_DAY = 1440;
+
+                this.style.display = "block";
+                this.style.position = "absolute";
+                this.style.width = (100/DAYS_IN_A_WEEK) + "%";
+                this.style.height = "100%";
+                this.style.left = (100/DAYS_IN_A_WEEK * (this.dayOfWeek - 1)) + "%";
+
+                var pxWidth = this.offsetWidth,
+                    pxHeight = this.offsetHeight,
+                    width = pxWidth * 5,
+                    height = pxHeight * 5,
+                    minuteHeight = height / MINUTES_IN_A_DAY,
+                    verticalMargin =  height / pxHeight;
+
+                var draw = SVG(this.$.shift).fixSubPixelOffset().size(pxWidth+2,pxHeight).viewbox(0, 0, width, height).fill(this.bgColor).attr({'stroke-width': 0});
+
+                draw.style({ display: 'block', position: 'absolute' });
+
+                draw.path('' +
+                'M ' + '0 ' + (this.startTime * minuteHeight + verticalMargin) +
+                ' l ' + (width) + ' 0 ' +
+                '0 ' + ((this.endTime - this.startTime) * minuteHeight) +
+                ' -' + (width / 2) + ' 0 ' +
+                '0 -' + (60 * minuteHeight) +
+                ' -' + (width / 2) + ' 0 ' +
+                '0 -' + ((this.endTime - this.startTime - 60) * minuteHeight) + ' Z');
+
+                var shiftTextLine1 = draw.text( function (add) {
+                    add.tspan(this.shiftData.employeeCode).dy((this.endTime - this.startTime) /2 - 60 );
+                }.bind(this)).fill(this.color);
+                var shiftTextLine2 = draw.text( function (add) {
+                    add.tspan(this.displayStartTime() + '-' + this.displayEndTime()).dy((this.endTime - this.startTime) /2 - 10 );
+                }.bind(this)).fill(this.color);
+                var shiftTextLine3 = draw.text( function (add) {
+                    add.tspan(this.shiftData.shiftCode).dy((this.endTime - this.startTime) /2 + 60);
+                }.bind(this)).fill(this.color);
+
+                shiftTextLine1.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 60, family: 'Verdana', anchor: 'middle' });
+                shiftTextLine2.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 40, family: 'Verdana', anchor: 'middle' });
+                shiftTextLine3.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 60, family: 'Verdana', anchor: 'middle' });
+                shiftTextLine1.textPath.attr({ startOffset: '50%'});
+                shiftTextLine2.textPath.attr({ startOffset: '50%'});
+                shiftTextLine3.textPath.attr({ startOffset: '50%'});
+            }
+        });
+    </script>
+</polymer-element>
