@@ -14,21 +14,3 @@ svg {
 #weekScheduleOverlay {
     position: absolute;
 }
-
-#day1Schedule {
-    position: absolute;
-    left: 0;
-    box-sizing: border-box;
-}
-
-#day2Schedule {
-    position: absolute;
-    left: 60px;
-    box-sizing: border-box;
-}
-
-#day3pt1Schedule {
-    position: absolute;
-    left: 120px;
-    box-sizing: border-box;
-}

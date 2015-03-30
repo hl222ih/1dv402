@@ -15,6 +15,12 @@
         <div id="weekScheduleOverlay" draggable="false"></div>
     </template>
     <script>
+
+        var DAYS_IN_A_WEEK = 7;
+        var MINUTES_IN_A_DAY = 1440;
+        var MINUTES_IN_AN_HOUR = 60;
+        var HOURS_IN_A_DAY = 24;
+
         Polymer('one-week', {
             shifts: [{
                 dayOfWeek: 1,
@@ -42,40 +48,36 @@
             }],
             pxWidth: 420,
             pxHeight: 288,
-            strokeWidth: 1, //1-3, flaw for bigger?
+            strokeWidth: 1,
             renderSchedule: function() {
 
-                var pxWidth = this.pxWidth;
-                var pxHeight = this.pxHeight;
                 var strokeWidth = this.strokeWidth;
+                var pxWidth = this.pxWidth + 8;
+                var pxHeight = this.pxHeight;
                 var width = pxWidth * 5;
                 var height = pxHeight * 5;
-                var minuteHeight = height / 1440;
-                var horizontalMargin = strokeWidth / 2 + width / pxWidth;
-                var verticalMargin = strokeWidth / 2 + height / pxHeight;
-                var extraPixelWidth = width / pxWidth;
-                var extraPixelHeight = height / pxHeight;
-                var fullWidth = width + extraPixelWidth * 2;
-                var fullHeight = height + extraPixelHeight * 2;
-                var dayWidth = (width - strokeWidth)/ 7;
-                SVG(this.$.weekSchedule).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(0, 0, width, height).attr({ fill: '#222'});
+                var minuteHeight = height / MINUTES_IN_A_DAY;
+                var dayWidth = (width - 40)/ DAYS_IN_A_WEEK;
+                var bgDraw = SVG(this.$.weekSchedule).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(-0.5, -0.5, width, height);
+                bgDraw.rect(width,height).fill('#f0f0f0');
 
-                var draw = SVG(this.$.weekScheduleOverlay).fixSubPixelOffset().size(pxWidth+2,pxHeight+2).viewbox(0,0,fullWidth,fullHeight).attr({ fill: 'none', 'stroke-width': strokeWidth, stroke: 'blue'});
+                var draw = SVG(this.$.weekScheduleOverlay).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(-0.5,-0.5,width,height).attr({ fill: 'none', 'stroke-width': strokeWidth, stroke: 'blue'});
+
                 var path = '' +
                             //between days lines
-                        'M ' + (dayWidth + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 2 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 3 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 4 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 5 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 6 + horizontalMargin) + ' ' + verticalMargin + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth + 5) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 2 + 10) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 3 + 15) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 4 + 20) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 5 + 25) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth * 6 + 30) + ' 0'  + ' l 0 ' + (height) + ' ' +
                             //border line
-                        'M ' + horizontalMargin + ' ' + verticalMargin + ' l ' + (width) + ' 0 0 ' + (height) + ' -' + (width) + ' 0 0 -' + (height) + 'Z ';
+                        'M ' + 0 + ' ' + 0 + ' l ' + (width - 5) + ' 0 0 ' + (height) + ' -' + (width - 5) + ' 0 0 -' + (height) + 'Z ';
                 //hour markers
-                for (var hour = 1; hour <= 23; hour++) {
-                    for (var day = 1; day <= 7; day++) {
-                        path += 'M ' + (horizontalMargin + (day - 1) * dayWidth) + ' ' + (verticalMargin + hour * 60 * minuteHeight) + ' l ' + (dayWidth / 40) + ' 0 ';
-                        path += 'M ' + (horizontalMargin + day * dayWidth - dayWidth / 40) + ' ' + (verticalMargin + hour * 60 * minuteHeight) + ' l ' + (dayWidth / 40) + ' 0 ';
+                for (var hour = 1; hour < HOURS_IN_A_DAY; hour++) {
+                    for (var day = 1; day <= DAYS_IN_A_WEEK; day++) {
+                        path += 'M ' + ((day - 1) * dayWidth + (day - 1) * 5) + ' ' + (hour * 60 * minuteHeight) + ' l ' + (dayWidth / 30) + ' 0 ';
+                        path += 'M ' + (day * dayWidth + day * 5 - dayWidth / 30) + ' ' + (hour * 60 * minuteHeight) + ' l ' + (dayWidth / 30) + ' 0 ';
                     }
                 }
                 draw.path(path);
@@ -83,6 +85,8 @@
             ready: function() {
                 this.style.display = "block";
                 this.style.position = "absolute";
+                this.style.left = "100px";
+                this.style.top = "100px";
                 this.style.width = this.pxWidth + 'px';
                 this.style.height = this.pxHeight + 'px';
             },
@@ -91,9 +95,10 @@
                 this.$.weekScheduleOverlay.style.top = (this.weekNumber * 30) + "px";
                 this.$.weekSchedule.style.top = (this.weekNumber * 30) + "px";
                 this.$.weekSchedule.style.left = (this.weekNumber * 30) + "px";
+
                 this.renderSchedule();
                 this.shifts.push({
-                    dayOfWeek: 6,
+                    dayOfWeek: 7,
                     bgColor: '#ffcc66',
                     color: 'black',
                     workPlaceCode: "Tg.",

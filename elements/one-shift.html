@@ -6,10 +6,13 @@
         <div id="shift"></div>
     </template>
     <script>
+        var DAYS_IN_A_WEEK = 7;
+        var MINUTES_IN_A_DAY = 1440;
+        var MINUTES_IN_AN_HOUR = 60;
+
         var minutesToHHMMString = function(minutes) {
-            var MINUTES_IN_AN_HOUR = 60;
             var HHMMString = "";
-            var minutes = parseInt(minutes, 10); //make sure integer
+            minutes = parseInt(minutes, 10); //make sure integer
             var hourPart = Math.floor(minutes / MINUTES_IN_AN_HOUR); //truncate due to no integer division in javascript
             var minutePart = minutes % MINUTES_IN_AN_HOUR; //modulus go get hours
 
@@ -50,28 +53,25 @@
                 this.dayOfWeek = this.shiftData.dayOfWeek;
             },
             domReady: function() {
-                const DAYS_IN_A_WEEK = 7;
-                const MINUTES_IN_A_DAY = 1440;
-
                 this.style.display = "block";
                 this.style.position = "absolute";
                 this.style.width = (100/DAYS_IN_A_WEEK) + "%";
-                this.style.height = "100%";
-                this.style.left = (100/DAYS_IN_A_WEEK * (this.dayOfWeek - 1)) + "%";
 
-                var pxWidth = this.offsetWidth,
-                    pxHeight = this.offsetHeight,
+                this.style.height = "100%";
+                this.style.left = (427/428*100/DAYS_IN_A_WEEK * (this.dayOfWeek - 1)) + "%";
+
+                var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
+                    pxHeight = parseFloat(getComputedStyle(this).height, 10),
                     width = pxWidth * 5,
                     height = pxHeight * 5,
-                    minuteHeight = height / MINUTES_IN_A_DAY,
-                    verticalMargin =  height / pxHeight;
+                    minuteHeight = height / MINUTES_IN_A_DAY;
 
-                var draw = SVG(this.$.shift).fixSubPixelOffset().size(pxWidth+2,pxHeight).viewbox(0, 0, width, height).fill(this.bgColor).attr({'stroke-width': 0});
+                var draw = SVG(this.$.shift).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(0, 0, width, height).fill(this.bgColor).attr({'stroke-width': 0});
 
                 draw.style({ display: 'block', position: 'absolute' });
 
                 draw.path('' +
-                'M ' + '0 ' + (this.startTime * minuteHeight + verticalMargin) +
+                'M ' + '0 ' + (this.startTime * minuteHeight) +
                 ' l ' + (width) + ' 0 ' +
                 '0 ' + ((this.endTime - this.startTime) * minuteHeight) +
                 ' -' + (width / 2) + ' 0 ' +
