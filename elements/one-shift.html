@@ -1,9 +1,12 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 
 <polymer-element name="one-shift" attributes="shiftData">
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
-        <div id="shift"></div>
+        <core-drag-drop></core-drag-drop>
+
+        <!--<div id="shift"></div>-->
     </template>
     <script>
         var DAYS_IN_A_WEEK = 7;
@@ -24,19 +27,34 @@
             HHMMString = hourPart + ":" + minutePart; //format as "HH:MM" string
             return HHMMString;
         };
-
         Polymer('one-shift', {
             workPlaceCode: "",
             employeeCode: "",
             startTime: 0,
             endTime: 0,
+            width: 0,
             week: null,
             repeatWeek: null,
+            dragged: false,
             calcMinutes: function() {
                 var minutes = 0;
                 if (this.startTime >= this.endTime)
                     minutes += 24*60;
                 minutes += this.endTime - this.startTime;
+                return minutes;
+            },
+            calcMinutesOfCurrentDay: function() {
+                var minutes = 0;
+                if (this.startTime >= this.endTime)
+                    minutes = 24*60 - this.startTime;
+                else
+                    minutes = this.endTime - this.startTime;
+                return minutes;
+            },
+            calcMinutesOfNextDay: function() {
+                var minutes = 0;
+                if (this.startTime >= this.endTime)
+                    minutes = this.startTime;
                 return minutes;
             },
             displayStartTime: function () {
@@ -46,27 +64,68 @@
                 return minutesToHHMMString(this.endTime);
             },
             ready: function() {
+                var self = this;
                 this.bgColor = this.shiftData.bgColor;
                 this.color = this.shiftData.color;
                 this.startTime = this.shiftData.startTime;
                 this.endTime = this.shiftData.endTime;
                 this.dayOfWeek = this.shiftData.dayOfWeek;
+                this.numberOfShiftsWide = this.shiftData.numberOfShiftsWide;
+                this.shiftPosition = this.shiftData.shiftPosition;
+                this.pxWidth = this.shiftData.pxWidth;
+
+                this.style.height = this.calcMinutesOfCurrentDay() / 5 + 'px';
+                this.style.backgroundColor = this.bgColor;
+                this.style.top = this.startTime / 5 + "px";
+
+                var dragStart = function (ev) {
+                    var dragInfo = ev.detail;
+                    //if (this.dragged) return;
+                    this.dragged = true;
+                    // flaw #2: e vs dragInfo.event
+                    //var color = dragInfo.event.target.style.backgroundColor;
+                    //alert(dragInfo.event.target.clientWidth);
+                    //dragInfo.avatar.style.cssText = 'top: ' + dragInfo.event.target.clientWidth + '; left: ' + dragInfo.event.target.clientHeight + ';';
+                    //dragInfo.avatar = this.$.shift.cloneNode(true);
+                    //dragInfo.avatar.offsetLeft = "20px";
+                    //dragInfo.avatar.offsetTop = "20px";
+                    dragInfo.avatar.style.cssText = 'left: -19px; top: -19px; border: 3px solid blue'  + '; width: 32px; height: 32px; border-radius: 32px; background-color: whitesmoke';
+                    self.dragged = true;
+                    //self.fire('started-dragging');
+                    //dragInfo.avatar.appendChild(dragInfo.event.target);
+                    dragInfo.drag = function() {
+//                        document.getElementsByName("body")[0].style.cursor = "none";
+                    }.bind(dragInfo);
+                    dragInfo.drop = drop;
+                };
+                var drop = function (dragInfo) {
+                    var dropTarget = dragInfo.event.relatedTarget;
+                    dropTarget.style.backgroundColor = "red";
+                    //self.fire('stopped-dragging');
+                    self.dragged = false;
+
+//                    document.getElementsByName("body")[0].style.cursor = "default";
+                };
+                this.addEventListener('drag-start', dragStart);
+            },
+            draggedChanged: function(oldValue, newValue) {
+
+                if (newValue === true) {
+                    this.fire('started-dragging');
+                } else if (newValue === false) {
+                    this.fire('stopped-dragging');
+                }
             },
             domReady: function() {
-                this.style.display = "block";
-                this.style.position = "absolute";
-                this.style.width = (100/DAYS_IN_A_WEEK) + "%";
-
-                this.style.height = "100%";
-                this.style.left = (427/428*100/DAYS_IN_A_WEEK * (this.dayOfWeek - 1)) + "%";
-
+                this.style.width = (100/DAYS_IN_A_WEEK/this.numberOfShiftsWide) + "%";
+                this.style.left = (427/428*100/DAYS_IN_A_WEEK * (this.dayOfWeek - 1) + (this.shiftPosition - 1) * 100/DAYS_IN_A_WEEK/this.numberOfShiftsWide) + "%";
                 var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
                     pxHeight = parseFloat(getComputedStyle(this).height, 10),
                     width = pxWidth * 5,
                     height = pxHeight * 5,
                     minuteHeight = height / MINUTES_IN_A_DAY;
 
-                var draw = SVG(this.$.shift).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(0, 0, width, height).fill(this.bgColor).attr({'stroke-width': 0});
+               /* var draw = SVG(this.$.shift).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(-0.5, -0.5, width, height).fill(this.bgColor).attr({'stroke-width': 0});
 
                 draw.style({ display: 'block', position: 'absolute' });
 
@@ -79,22 +138,26 @@
                 ' -' + (width / 2) + ' 0 ' +
                 '0 -' + ((this.endTime - this.startTime - 60) * minuteHeight) + ' Z');
 
+                //employee's initials
                 var shiftTextLine1 = draw.text( function (add) {
-                    add.tspan(this.shiftData.employeeCode).dy((this.endTime - this.startTime) /2 - 60 );
+                    add.tspan(this.shiftData.employeeCode).dy((this.endTime - this.startTime) /2 - 60); //can't get dy() work with IE.
                 }.bind(this)).fill(this.color);
+                shiftTextLine1.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 60, family: 'Verdana', anchor: 'middle' });
+                shiftTextLine1.textPath.attr({ startOffset: '50%'});
+
+                //from-to time
                 var shiftTextLine2 = draw.text( function (add) {
                     add.tspan(this.displayStartTime() + '-' + this.displayEndTime()).dy((this.endTime - this.startTime) /2 - 10 );
                 }.bind(this)).fill(this.color);
+                shiftTextLine2.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 40, family: 'Verdana', anchor: 'middle' });
+                shiftTextLine2.textPath.attr({ startOffset: '50%'});
+
+                //shift's code
                 var shiftTextLine3 = draw.text( function (add) {
                     add.tspan(this.shiftData.shiftCode).dy((this.endTime - this.startTime) /2 + 60);
                 }.bind(this)).fill(this.color);
-
-                shiftTextLine1.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 60, family: 'Verdana', anchor: 'middle' });
-                shiftTextLine2.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 40, family: 'Verdana', anchor: 'middle' });
                 shiftTextLine3.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 60, family: 'Verdana', anchor: 'middle' });
-                shiftTextLine1.textPath.attr({ startOffset: '50%'});
-                shiftTextLine2.textPath.attr({ startOffset: '50%'});
-                shiftTextLine3.textPath.attr({ startOffset: '50%'});
+                shiftTextLine3.textPath.attr({ startOffset: '50%'});*/
             }
         });
     </script>

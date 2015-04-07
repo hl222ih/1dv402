@@ -5,14 +5,11 @@
     <template>
         <link rel="stylesheet" href="one-week.css" type="text/css">
         <div id="weekSchedule" draggable="false">
-            <div id="day1Schedule" draggable="true"></div>
-            <div id="day2Schedule" draggable="true"></div>
-            <div id="day3pt1Schedule" draggable="true"></div>
             <template repeat="{{s in shifts}}">
-                <one-shift shiftData={{s}} />
+                <one-shift id="oneShift" shiftData={{s}} />
             </template>
         </div>
-        <div id="weekScheduleOverlay" draggable="false"></div>
+        <div id="weekScheduleOverlay" draggable="false" style="pointer-events: none;"></div>
     </template>
     <script>
 
@@ -20,6 +17,8 @@
         var MINUTES_IN_A_DAY = 1440;
         var MINUTES_IN_AN_HOUR = 60;
         var HOURS_IN_A_DAY = 24;
+        var NUMBER_OF_VERTICAL_LINES = DAYS_IN_A_WEEK + 1;
+        var VIEWBOX_MULTIPLIER = 5;
 
         Polymer('one-week', {
             shifts: [{
@@ -32,7 +31,10 @@
                 startTime: 420,
                 endTime: 1020,
                 week: 2,
-                repeatWeek: 2
+                repeatWeek: 2,
+                numberOfShiftsWide: 2,
+                shiftPosition: 1,
+                pxWidth: 60
             },
             {
                 dayOfWeek: 3,
@@ -44,7 +46,10 @@
                 startTime: 420,
                 endTime: 960,
                 week: 2,
-                repeatWeek: 2
+                repeatWeek: 2,
+                numberOfShiftsWide: 2,
+                shiftPosition: 2,
+                pxWidth: 60
             }],
             pxWidth: 420,
             pxHeight: 288,
@@ -52,12 +57,12 @@
             renderSchedule: function() {
 
                 var strokeWidth = this.strokeWidth;
-                var pxWidth = this.pxWidth + 8;
+                var pxWidth = this.pxWidth + NUMBER_OF_VERTICAL_LINES; //why here and not for this.pxWidth?
                 var pxHeight = this.pxHeight;
-                var width = pxWidth * 5;
-                var height = pxHeight * 5;
+                var width = pxWidth * VIEWBOX_MULTIPLIER;
+                var height = pxHeight * VIEWBOX_MULTIPLIER;
                 var minuteHeight = height / MINUTES_IN_A_DAY;
-                var dayWidth = (width - 40)/ DAYS_IN_A_WEEK;
+                var dayWidth = (width - (VIEWBOX_MULTIPLIER * NUMBER_OF_VERTICAL_LINES))/ DAYS_IN_A_WEEK;
                 var bgDraw = SVG(this.$.weekSchedule).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(-0.5, -0.5, width, height);
                 bgDraw.rect(width,height).fill('#f0f0f0');
 
@@ -65,23 +70,25 @@
 
                 var path = '' +
                             //between days lines
-                        'M ' + (dayWidth + 5) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 2 + 10) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 3 + 15) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 4 + 20) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 5 + 25) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + (dayWidth * 6 + 30) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + (dayWidth + VIEWBOX_MULTIPLIER) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 2) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 3) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 4) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 5) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 6) + ' 0'  + ' l 0 ' + (height) + ' ' +
                             //border line
-                        'M ' + 0 + ' ' + 0 + ' l ' + (width - 5) + ' 0 0 ' + (height) + ' -' + (width - 5) + ' 0 0 -' + (height) + 'Z ';
+                        'M ' + 0 + ' ' + 0 + ' l ' + (width - VIEWBOX_MULTIPLIER) + ' 0 0 ' + (height) + ' -' + (width - VIEWBOX_MULTIPLIER) + ' 0 0 -' + (height) + 'Z ';
                 //hour markers
+                var hourMarkerWidth = dayWidth / 30;
                 for (var hour = 1; hour < HOURS_IN_A_DAY; hour++) {
                     for (var day = 1; day <= DAYS_IN_A_WEEK; day++) {
-                        path += 'M ' + ((day - 1) * dayWidth + (day - 1) * 5) + ' ' + (hour * 60 * minuteHeight) + ' l ' + (dayWidth / 30) + ' 0 ';
-                        path += 'M ' + (day * dayWidth + day * 5 - dayWidth / 30) + ' ' + (hour * 60 * minuteHeight) + ' l ' + (dayWidth / 30) + ' 0 ';
+                        path += 'M ' + ((day - 1) * (dayWidth + VIEWBOX_MULTIPLIER)) + ' ' + (hour * MINUTES_IN_AN_HOUR * minuteHeight) + ' l ' + hourMarkerWidth + ' 0 ';
+                        path += 'M ' + (day * dayWidth + day * VIEWBOX_MULTIPLIER - hourMarkerWidth) + ' ' + (hour * MINUTES_IN_AN_HOUR * minuteHeight) + ' l ' + hourMarkerWidth + ' 0 ';
                     }
                 }
                 draw.path(path);
             },
+
             ready: function() {
                 this.style.display = "block";
                 this.style.position = "absolute";
@@ -89,12 +96,26 @@
                 this.style.top = "100px";
                 this.style.width = this.pxWidth + 'px';
                 this.style.height = this.pxHeight + 'px';
+                this.$.oneShift.addEventListener('started-dragging', function() {
+                    alert("got here");
+                });
+                this.$.oneShift.addEventListener('stopped-dragging', function() {
+
+                });
             },
             domReady: function() {
                 this.$.weekScheduleOverlay.style.left = (this.weekNumber * 30) + "px";
                 this.$.weekScheduleOverlay.style.top = (this.weekNumber * 30) + "px";
                 this.$.weekSchedule.style.top = (this.weekNumber * 30) + "px";
                 this.$.weekSchedule.style.left = (this.weekNumber * 30) + "px";
+
+                //var oneShifts = this.shadowRoot.querySelectorAll('one-shift');
+
+//                Array.prototype.forEach.call (oneShifts, function (os) {
+//                    os.addEventListener('started-dragging', function() {
+                //                       alert("got here");
+                //  });
+                //});
 
                 this.renderSchedule();
                 this.shifts.push({
@@ -107,7 +128,10 @@
                     startTime: 450,
                     endTime: 960,
                     week: 2,
-                    repeatWeek: 2
+                    repeatWeek: 2,
+                    numberOfShiftsWide: 2,
+                    shiftPosition: 2,
+                    pxWidth: 60
                 });
             }
         });
