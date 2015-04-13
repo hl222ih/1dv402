@@ -6,6 +6,17 @@
     <script src="bower_components/webcomponentsjs/webcomponents.js"></script>
     <link rel="import" href="elements/one-schedule.html"/>
     <title>Schedule</title>
+    <style>
+        one-schedule {
+            opacity: 1;
+            transition: opacity 500ms ease-in;
+        }
+
+        one-schedule:unresolved {
+            opacity: 0;
+        }
+
+    </style>
 </head>
 <body>
     <one-schedule></one-schedule>

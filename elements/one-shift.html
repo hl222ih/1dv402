@@ -1,12 +1,23 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 
-<polymer-element name="one-shift" attributes="shiftData">
+<polymer-element draggable="false" name="one-shift" attributes="shiftData">
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
-        <core-drag-drop></core-drag-drop>
 
-        <!--<div id="shift"></div>-->
+        <core-drag-drop></core-drag-drop>
+        <!--
+            changed
+                Polymer.addEventListener(this.parentNode, event, this[handler].bind(this));
+            to
+                Polymer.addEventListener(this.parentNode.host, event, this[handler].bind(this));
+            otherwise core-drag-drop will only listen to dragging child elements, not the Polymer element itself
+        -->
+
+        <div id="shiftCode" draggable="false">{{shiftCode}}</div>
+        <div id="workplaceCode">{{workplaceCode}}</div>
+        <div id="employeeCode">{{employeeCode}}</div>
+        <div id="displayStartTime">{{displayStartTime()}}-{{displayEndTime()}}</div>
     </template>
     <script>
         var DAYS_IN_A_WEEK = 7;
@@ -17,7 +28,7 @@
             var HHMMString = "";
             minutes = parseInt(minutes, 10); //make sure integer
             var hourPart = Math.floor(minutes / MINUTES_IN_AN_HOUR); //truncate due to no integer division in javascript
-            var minutePart = minutes % MINUTES_IN_AN_HOUR; //modulus go get hours
+            var minutePart = minutes % MINUTES_IN_AN_HOUR; //modulus to get hours
 
             if (hourPart < 10) //add leading zero if necessary
                 hourPart = "0" + hourPart;
@@ -28,25 +39,69 @@
             return HHMMString;
         };
         Polymer('one-shift', {
-            workPlaceCode: "",
-            employeeCode: "",
-            startTime: 0,
-            endTime: 0,
             width: 0,
             week: null,
             repeatWeek: null,
             dragged: false,
+            workplaceCode: "",
+            employeeCode: "",
+            shiftCode: "",
+            bgColor: "#eee",
+            color: "#000",
+            startTime: 0,
+            endTime: 0,
+            dayOfWeek: 1,
+            numberOfShiftsWide: 1,
+            shiftPosition: 1,
+            pxWidth: 0,
+            oneShiftDragStart: function(event, detail, sender) {
+                var self = this;
+                var dragInfo = event.detail; //has to be event.detail, detail does not work. (core-drag-drop functionality)
+                dragInfo.avatar.style.cssText = 'z-index: 1000; left: -14px; top: -8px; border: 2px solid blue'  + '; width: 24px; height: 12px; border-radius: 50%; background-color: rgba(0,0,0,0)'; //should be done better
+                dragInfo.draggedItem = this;
+                dragInfo.dropTarget = null;
+                self.dragged = true;
+                dragInfo.drag = function(dragInfo) {
+                    var draggedItem = dragInfo.draggedItem;
+                    //added specialRelatedTarget = inEvent.currentTarget to var gestureProto = { ... } in Polymer.js
+                    //to make dropTarget available in drag (track) event.
+                    var dropTarget = dragInfo.event.specialRelatedTarget;
+                    if (dropTarget !== draggedItem) {
+                        if (dropTarget.id === "oneShift") {
+                            self.addStyleToTargetOneShift(dropTarget);
+                            dragInfo.dropTarget = dropTarget;
+                        } else {
+                            dropTarget = dragInfo.dropTarget;
+                            self.resetStyleForTargetOneShift(dropTarget);
+                        }
+                    }
+                    else {
+                        dropTarget = dragInfo.dropTarget;
+                        self.resetStyleForTargetOneShift(dropTarget);
+                    }
+                }; //seems to be needed to trigger some functionality in core-drag-drop
+                dragInfo.drop = function (dragInfo) {
+                    //var dropTarget = dragInfo.event.relatedTarget;
+                    var dropTarget = dragInfo.dropTarget;
+                    if (dropTarget != null) {
+                        dropTarget.style.backgroundColor = "red";
+                    }
+                    self.dragged = false;
+
+                    self.resetStyleForTargetOneShift(dropTarget);
+                };
+            },
             calcMinutes: function() {
                 var minutes = 0;
                 if (this.startTime >= this.endTime)
-                    minutes += 24*60;
+                    minutes += MINUTES_IN_A_DAY;
                 minutes += this.endTime - this.startTime;
                 return minutes;
             },
             calcMinutesOfCurrentDay: function() {
                 var minutes = 0;
                 if (this.startTime >= this.endTime)
-                    minutes = 24*60 - this.startTime;
+                    minutes = MINUTES_IN_A_DAY - this.startTime;
                 else
                     minutes = this.endTime - this.startTime;
                 return minutes;
@@ -65,55 +120,29 @@
             },
             ready: function() {
                 var self = this;
-                this.bgColor = this.shiftData.bgColor;
-                this.color = this.shiftData.color;
-                this.startTime = this.shiftData.startTime;
-                this.endTime = this.shiftData.endTime;
-                this.dayOfWeek = this.shiftData.dayOfWeek;
-                this.numberOfShiftsWide = this.shiftData.numberOfShiftsWide;
-                this.shiftPosition = this.shiftData.shiftPosition;
-                this.pxWidth = this.shiftData.pxWidth;
+                this.workplaceCode = this.shiftData.workplaceCode || this.workplaceCode;
+                this.employeeCode = this.shiftData.employeeCode || this.employeeCode;
+                this.shiftCode = this.shiftData.shiftCode || this.shiftCode;
+                this.bgColor = this.shiftData.bgColor || this.bgColor;
+                this.color = this.shiftData.color || this.color;
+                this.startTime = this.shiftData.startTime || this.startTime;
+                this.endTime = this.shiftData.endTime || this.endTime;
+                this.dayOfWeek = this.shiftData.dayOfWeek || this.dayOfWeek;
+                this.numberOfShiftsWide = this.shiftData.numberOfShiftsWide || this.numberOfShiftsWide;
+                this.shiftPosition = this.shiftData.shiftPosition || this.shiftPosition;
+                this.pxWidth = this.shiftData.pxWidth || this.pxWidth;
 
                 this.style.height = this.calcMinutesOfCurrentDay() / 5 + 'px';
                 this.style.backgroundColor = this.bgColor;
                 this.style.top = this.startTime / 5 + "px";
 
-                var dragStart = function (ev) {
-                    var dragInfo = ev.detail;
-                    //if (this.dragged) return;
-                    this.dragged = true;
-                    // flaw #2: e vs dragInfo.event
-                    //var color = dragInfo.event.target.style.backgroundColor;
-                    //alert(dragInfo.event.target.clientWidth);
-                    //dragInfo.avatar.style.cssText = 'top: ' + dragInfo.event.target.clientWidth + '; left: ' + dragInfo.event.target.clientHeight + ';';
-                    //dragInfo.avatar = this.$.shift.cloneNode(true);
-                    //dragInfo.avatar.offsetLeft = "20px";
-                    //dragInfo.avatar.offsetTop = "20px";
-                    dragInfo.avatar.style.cssText = 'left: -19px; top: -19px; border: 3px solid blue'  + '; width: 32px; height: 32px; border-radius: 32px; background-color: whitesmoke';
-                    self.dragged = true;
-                    //self.fire('started-dragging');
-                    //dragInfo.avatar.appendChild(dragInfo.event.target);
-                    dragInfo.drag = function() {
-//                        document.getElementsByName("body")[0].style.cursor = "none";
-                    }.bind(dragInfo);
-                    dragInfo.drop = drop;
-                };
-                var drop = function (dragInfo) {
-                    var dropTarget = dragInfo.event.relatedTarget;
-                    dropTarget.style.backgroundColor = "red";
-                    //self.fire('stopped-dragging');
-                    self.dragged = false;
-
-//                    document.getElementsByName("body")[0].style.cursor = "default";
-                };
-                this.addEventListener('drag-start', dragStart);
+                this.addEventListener('drag-start', self.oneShiftDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
             },
             draggedChanged: function(oldValue, newValue) {
-
                 if (newValue === true) {
-                    this.fire('started-dragging');
+                    this.fire('shiftdragstart');
                 } else if (newValue === false) {
-                    this.fire('stopped-dragging');
+                    this.fire('shiftdragend');
                 }
             },
             domReady: function() {
@@ -124,41 +153,23 @@
                     width = pxWidth * 5,
                     height = pxHeight * 5,
                     minuteHeight = height / MINUTES_IN_A_DAY;
+            },
+            addStyleToTargetOneShift: function (targetOneShift) {
+                if (targetOneShift != null && ("style" in targetOneShift)) {
+                    targetOneShift.style.border = "3px solid lightgreen";
+                    targetOneShift.style.transform = "translate(-3px, -3px)";
+                    targetOneShift.style.zIndex = "1";
+                }
+            },
+            resetStyleForTargetOneShift: function (targetOneShift) {
+                if (targetOneShift != null && ("style" in targetOneShift)) {
+                    targetOneShift.style.border = null;
+                    targetOneShift.style.transform = null;
+                    targetOneShift.style.zIndex = null;
+                }
 
-               /* var draw = SVG(this.$.shift).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(-0.5, -0.5, width, height).fill(this.bgColor).attr({'stroke-width': 0});
-
-                draw.style({ display: 'block', position: 'absolute' });
-
-                draw.path('' +
-                'M ' + '0 ' + (this.startTime * minuteHeight) +
-                ' l ' + (width) + ' 0 ' +
-                '0 ' + ((this.endTime - this.startTime) * minuteHeight) +
-                ' -' + (width / 2) + ' 0 ' +
-                '0 -' + (60 * minuteHeight) +
-                ' -' + (width / 2) + ' 0 ' +
-                '0 -' + ((this.endTime - this.startTime - 60) * minuteHeight) + ' Z');
-
-                //employee's initials
-                var shiftTextLine1 = draw.text( function (add) {
-                    add.tspan(this.shiftData.employeeCode).dy((this.endTime - this.startTime) /2 - 60); //can't get dy() work with IE.
-                }.bind(this)).fill(this.color);
-                shiftTextLine1.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 60, family: 'Verdana', anchor: 'middle' });
-                shiftTextLine1.textPath.attr({ startOffset: '50%'});
-
-                //from-to time
-                var shiftTextLine2 = draw.text( function (add) {
-                    add.tspan(this.displayStartTime() + '-' + this.displayEndTime()).dy((this.endTime - this.startTime) /2 - 10 );
-                }.bind(this)).fill(this.color);
-                shiftTextLine2.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 40, family: 'Verdana', anchor: 'middle' });
-                shiftTextLine2.textPath.attr({ startOffset: '50%'});
-
-                //shift's code
-                var shiftTextLine3 = draw.text( function (add) {
-                    add.tspan(this.shiftData.shiftCode).dy((this.endTime - this.startTime) /2 + 60);
-                }.bind(this)).fill(this.color);
-                shiftTextLine3.path('M0 ' + this.startTime + ' l ' + width + ' 0').font({ size: 60, family: 'Verdana', anchor: 'middle' });
-                shiftTextLine3.textPath.attr({ startOffset: '50%'});*/
             }
+
         });
     </script>
 </polymer-element>

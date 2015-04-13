@@ -1,6 +1,13 @@
 :host {
     display: block;
     position: absolute;
-    height: 100%
-    /* dynamic width, left */
+    height: 100%;
+    font-size: 9px;
+    font-family: "Verdana", sans-serif;
+    /* dynamic background-color, height, top */
+    /* dynamic width, left (?)*/
+}
+
+#shiftCode, #workplaceCode, #employeeCode {
+    text-align: center;
 }

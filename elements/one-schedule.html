@@ -1,24 +1,29 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="one-week.html"/>
 
-<polymer-element name="one-schedule">
+<polymer-element name="one-schedule" on-shiftdragstartinweek="shiftDragStart" on-shiftdragendinweek="shiftDragEnd">
     <template>
         <link rel="stylesheet" href="one-schedule.css" type="text/css">
 
-        <template repeat="{{item, itemIndex in scheduleItems}}">
-            <one-week scheduleData="{{item}}" weekNumber="{{itemIndex}}" layout="{{scheduleItems.length}}"></one-week>
+        <template repeat="{{scheduleItem, index in scheduleItems}}">
+            <one-week id="oneWeek" scheduleData="{{scheduleItem}}" weekNumber="{{index + 1}}" layout="{{scheduleItems.length}}"></one-week>
         </template>
 
     </template>
     <script src="../bower_components/svg.js/dist/svg.js"></script>
     <script>
         Polymer('one-schedule', {
-            scheduleItems: [{}],
+            scheduleItems: [{}, {}],
             shifts: [{
 
             }],
-
-            ready: function() {
+            ready: function () {
+            },
+            shiftDragStart: function() {
+                this.style.cursor = "none";
+            },
+            shiftDragEnd: function() {
+                this.style.cursor = "default";
             }
         });
     </script>

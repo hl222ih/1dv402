@@ -1,18 +1,18 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="one-shift.html"/>
 
-<polymer-element name="one-week" attributes="scheduleData weekNumber layout">
+<polymer-element name="one-week" attributes="scheduleData weekNumber layout"  on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd">
     <template>
         <link rel="stylesheet" href="one-week.css" type="text/css">
+
         <div id="weekSchedule" draggable="false">
-            <template repeat="{{s in shifts}}">
-                <one-shift id="oneShift" shiftData={{s}} />
+            <template repeat="{{s, index in shifts}}">
+                <one-shift id="oneShift" index="{{index}}" shiftData="{{s}}"></one-shift>
             </template>
         </div>
-        <div id="weekScheduleOverlay" draggable="false" style="pointer-events: none;"></div>
+        <div id="weekScheduleOverlay" draggable="false"></div>
     </template>
     <script>
-
         var DAYS_IN_A_WEEK = 7;
         var MINUTES_IN_A_DAY = 1440;
         var MINUTES_IN_AN_HOUR = 60;
@@ -21,11 +21,12 @@
         var VIEWBOX_MULTIPLIER = 5;
 
         Polymer('one-week', {
+            weekNumber: 1,
             shifts: [{
                 dayOfWeek: 1,
                 bgColor: '#ffcc66',
                 color: 'black',
-                workPlaceCode: "Tg.",
+                workplaceCode: "Tg.",
                 employeeCode: "RR",
                 shiftCode: "A2",
                 startTime: 420,
@@ -40,7 +41,7 @@
                 dayOfWeek: 3,
                 bgColor: '#ffcc66',
                 color: 'black',
-                workPlaceCode: "Tg.",
+                workplaceCode: "Tg.",
                 employeeCode: "RR",
                 shiftCode: "A1",
                 startTime: 420,
@@ -51,11 +52,18 @@
                 shiftPosition: 2,
                 pxWidth: 60
             }],
+            shiftsChanged: function(x) {
+                //x[0]: index: 0, removed: [shift, shift, ...], addedCount: 0
+                //alert("shifts changed " + this.shifts + ": " + JSON.stringify(x[0]));
+                //alert("added " + this.shifts[x[0].index-1].pxWidth);
+                //this.shifts[x[0].index-1].addEventListener('started-dragging', function() {
+                //    alert("got here");
+                //});
+            },
             pxWidth: 420,
             pxHeight: 288,
             strokeWidth: 1,
             renderSchedule: function() {
-
                 var strokeWidth = this.strokeWidth;
                 var pxWidth = this.pxWidth + NUMBER_OF_VERTICAL_LINES; //why here and not for this.pxWidth?
                 var pxHeight = this.pxHeight;
@@ -88,41 +96,31 @@
                 }
                 draw.path(path);
             },
-
             ready: function() {
-                this.style.display = "block";
-                this.style.position = "absolute";
-                this.style.left = "100px";
-                this.style.top = "100px";
-                this.style.width = this.pxWidth + 'px';
-                this.style.height = this.pxHeight + 'px';
-                this.$.oneShift.addEventListener('started-dragging', function() {
-                    alert("got here");
-                });
-                this.$.oneShift.addEventListener('stopped-dragging', function() {
-
-                });
+               // this.style.display = "block";
+                // this.style.position = "absolute";
             },
             domReady: function() {
-                this.$.weekScheduleOverlay.style.left = (this.weekNumber * 30) + "px";
-                this.$.weekScheduleOverlay.style.top = (this.weekNumber * 30) + "px";
-                this.$.weekSchedule.style.top = (this.weekNumber * 30) + "px";
-                this.$.weekSchedule.style.left = (this.weekNumber * 30) + "px";
-
-                //var oneShifts = this.shadowRoot.querySelectorAll('one-shift');
-
-//                Array.prototype.forEach.call (oneShifts, function (os) {
-//                    os.addEventListener('started-dragging', function() {
-                //                       alert("got here");
-                //  });
-                //});
+                if (this.weekNumber === 1) {
+                    this.style.left = "100px";
+                    this.style.top = "100px";
+                } else if (this.weekNumber == 2) {
+                    this.style.left = (110 + this.pxWidth + NUMBER_OF_VERTICAL_LINES) + "px";
+                    this.style.top = "100px";
+                }
+                this.style.width = (this.pxWidth + NUMBER_OF_VERTICAL_LINES) + 'px'; //10px between weeks
+                this.style.height = this.pxHeight + 'px';
+                //this.$.weekScheduleOverlay.style.left = (this.weekNumber * 30) + "px";
+                //this.$.weekScheduleOverlay.style.top = (this.weekNumber * 30) + "px";
+                //this.$.weekSchedule.style.top = (this.weekNumber * 30) + "px";
+                //this.$.weekSchedule.style.left = (this.weekNumber * 30) + "px";
 
                 this.renderSchedule();
                 this.shifts.push({
                     dayOfWeek: 7,
                     bgColor: '#ffcc66',
                     color: 'black',
-                    workPlaceCode: "Tg.",
+                    workplaceCode: "T",
                     employeeCode: "RR",
                     shiftCode: "A2",
                     startTime: 450,
@@ -133,6 +131,36 @@
                     shiftPosition: 2,
                     pxWidth: 60
                 });
+            },
+            shiftDragStart: function() {
+                this.fire('shiftdragstartinweek');
+                //this.$.oneShift.classList.add('dragPrepared');
+                var elements = this.shadowRoot.querySelectorAll('one-shift');
+                Array.prototype.forEach.call(elements, function(element) {
+                    element.classList.add('dragPrepared');
+                });
+                //var sheet = this.shadowRoot.querySelector('style').sheet;
+                //var hostRules = sheet.cssRules[0];
+                //hostRules.insertRule('one-shift:hover { border: 3px solid yellow; transform: translate(-3px, -3px); z-index: 1 }',
+                //      hostRules.cssRules.length);
+                //this.$.oneShift.class = "oneShiftHover";
+                //this.$.oneShift.style:hover =
+//                dropTarget.style.transform = null;
+//                dropTarget.style.zIndex = null;
+            },
+            shiftDragEnd: function() {
+                this.fire('shiftdragendinweek');
+                var elements = this.shadowRoot.querySelectorAll('one-shift');
+                Array.prototype.forEach.call(elements, function(element) {
+                    element.classList.remove('dragPrepared');
+                });
+                //this.$.oneShift.classList.remove('dragPrepared');
+                //this.$.oneShift.classe = '';
+
+                //this.$.oneShift.class = "";
+                //dropTarget.style.border = null;
+                //dropTarget.style.transform = null;
+                //dropTarget.style.zIndex = null;
             }
         });
     </script>
