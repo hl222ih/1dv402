@@ -1,29 +1,174 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-slider/paper-slider.html"/>
 <link rel="import" href="one-week.html"/>
+<link rel="import" href="one-shift.html"/><!--temp-->
 
-<polymer-element name="one-schedule" on-shiftdragstartinweek="shiftDragStart" on-shiftdragendinweek="shiftDragEnd">
+<polymer-element name="one-schedule" on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd" on-shiftdragstartinweek="shiftDragStart" on-shiftdragendinweek="shiftDragEnd">
     <template>
         <link rel="stylesheet" href="one-schedule.css" type="text/css">
+        <div id="headerContainer">
 
-        <template repeat="{{scheduleItem, index in scheduleItems}}">
-            <one-week id="oneWeek" scheduleData="{{scheduleItem}}" weekNumber="{{index + 1}}" layout="{{scheduleItems.length}}"></one-week>
-        </template>
-
+            <one-shift shiftData="{{tempData}}"></one-shift>
+        </div>
+        <div id="scheduleContainer">
+            <paper-slider id="paperSlider" min="100" max="1000" value="{{pxWeekWidth}}" immediateValue="{{pxWeekWidth}}"></paper-slider>
+            <template repeat="{{weekSchedule, index in currentSchedule.weekSchedules}}">
+                <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 288 / 420 / 1.66}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}"></one-week>
+            </template>
+        </div>
     </template>
     <script src="../bower_components/svg.js/dist/svg.js"></script>
     <script>
         Polymer('one-schedule', {
-            scheduleItems: [{}, {}],
-            shifts: [{
+            tempData: {
+                workplace: {
+                    code: "testWP"
+                },
+                employee: {
+                    code: "EMP"
+                }
+            },
+            pxWeekWidth: 420,
+            //pxWeekWidthChanged: function() {
+            //    this.currentSchedule.weekSchedules.forEach( function (weekSchedule) {
+            //        weekSchedule.pxWidth = this.pxWeekWidth;
+                    //    }, this);
+            //},
+            currentSchedule: {
+                name: "",
+                weekSchedules: []
+            },
+            schedules: [
+                {
+                    name: "Schema 1",
+                    numberOfWeeks: 4,
+                    shiftDefinitions: [
+                        {
+                            code: "A1",
+                            startTime: 420,
+                            endTime: 960
+                        }
+                    ],
+                    shifts: [
+                        {
+                            employeeCode: "AA",
+                            shiftCode: "A1",
+                            workplaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 3
+                        },
+                        {
+                            employeeCode: "BB",
+                            shiftCode: "A1",
+                            workplaceCode: "WP2",
+                            weeks: [1,2],
+                            dayOfWeek: 4
+                        }
 
-            }],
+                    ]
+                },
+                {
+                    name: "Schema 2",
+                    numberOfWeeks: 1,
+                    shiftDefinitions: [
+                        {
+                            code: "A1",
+                            startTime: 420,
+                            endTime: 960
+                        }
+                    ]
+                }
+            ],
+            weekSchedule: {},
+            workplaces: [
+                {
+                    code: "WP1",
+                    description: "workplace 1"
+                },
+                {
+                    code: "WP2",
+                    description: "workplace 2"
+                }
+            ],
+            employees: [
+                {
+                    code: "AA",
+                    name: "Agneta",
+                    color: "black",
+                    bgColor: "lightgreen"
+                },
+                {
+                    code: "BB",
+                    name: "Bertil",
+                    color: "black",
+                    bgColor: "lightblue"
+                }
+            ],
             ready: function () {
+                this.populateCurrentSchedule("Schema 1"); //pick first for now
+            },
+            populateCurrentSchedule: function(scheduleName) {
+                var scheduleData = this.schedules.filter( function (schedule) {
+                    return schedule.name === scheduleName;
+                })[0];
+
+                if (scheduleData === null) return;
+
+                this.currentSchedule.name = scheduleData.name;
+                this.currentSchedule.weekSchedules = [];
+                for (var i = 0; i < scheduleData.numberOfWeeks; i++) {
+                    this.currentSchedule.weekSchedules.push({ shifts: [] });
+                }
+
+                scheduleData.shifts.forEach( function (shiftData) {
+                    var shiftDefinition = scheduleData.shiftDefinitions.filter( function(shiftDefinition) {
+                        return shiftDefinition.code === shiftData.shiftCode;
+                    })[0];
+                    for (var i = 0; i < shiftData.weeks.length; i++) {
+                        var shift = {
+                            code: shiftData.shiftCode,
+                            employee: this.employees.filter( function(employee) {
+                                return employee.code === shiftData.employeeCode;
+                            })[0],
+                            workplace: this.workplaces.filter( function(workplace) {
+                                return workplace.code === shiftData.workplaceCode;
+                            })[0],
+                            week: shiftData.weeks[i],
+                            startTime: shiftDefinition ? shiftDefinition.startTime : 0,
+                            endTime: shiftDefinition ? shiftDefinition.endTime : 0,
+                            dayOfWeek: shiftData.dayOfWeek,
+                            numberOfShiftsWide: 3,
+                            shiftPosition: 2
+                        };
+
+                        //shiftCode: "A2",
+                        //startTime: 420,
+                        //endTime: 1020,
+                        //week: 2,
+                        //workplaceCode: "Tg.",
+                        //employeeCode: "RR",
+                        //dayOfWeek: 1,
+                        //bgColor: '#ffcc66',
+                        //color: 'black',
+                        //repeatWeek: 2, //not needed for now
+                        //pxWidth: 60 //automatically calculated for now, might be needed?
+
+                        //numberOfShiftsWide: 2,
+                        //shiftPosition: 1,
+
+
+                        this.currentSchedule.weekSchedules[i].shifts.push(shift);
+                    }
+                }, this);
+                //add some more stuff to each shift.
             },
             shiftDragStart: function() {
                 this.style.cursor = "none";
+                this.$.paperSlider.style.cursor = "none";
             },
             shiftDragEnd: function() {
                 this.style.cursor = "default";
+                this.$.paperSlider.style.cursor = "default";
             }
         });
     </script>

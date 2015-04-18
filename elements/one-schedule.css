@@ -1,5 +1,22 @@
 :host {
     display: block;
-    width: 100vw;
-    height: 100vh;
+    width: 95vw;
+    height: 95vh;
+}
+
+#headerContainer {
+    display: block;
+    position: relative;
+    height: 10%;
+    width: 90%;
+    background-color: #ffffed;
+    margin-bottom: 2%;
+}
+#scheduleContainer {
+    display: block;
+    position: relative;
+    height: 80%;
+    width: 90%;
+    background-color: #ffffed;
+    overflow: auto;
 }

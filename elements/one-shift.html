@@ -1,7 +1,7 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 
-<polymer-element draggable="false" name="one-shift" attributes="shiftData">
+<polymer-element draggable="false" name="one-shift" attributes="shiftData pxDayHeight">
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
 
@@ -17,31 +17,17 @@
         <div id="shiftCode" draggable="false">{{shiftCode}}</div>
         <div id="workplaceCode">{{workplaceCode}}</div>
         <div id="employeeCode">{{employeeCode}}</div>
-        <div id="displayStartTime">{{displayStartTime()}}-{{displayEndTime()}}</div>
+        <div id="displayTime">{{startTime|minutesToHHMMString }}-{{endTime|minutesToHHMMString}}</div>
     </template>
     <script>
         var DAYS_IN_A_WEEK = 7;
         var MINUTES_IN_A_DAY = 1440;
         var MINUTES_IN_AN_HOUR = 60;
 
-        var minutesToHHMMString = function(minutes) {
-            var HHMMString = "";
-            minutes = parseInt(minutes, 10); //make sure integer
-            var hourPart = Math.floor(minutes / MINUTES_IN_AN_HOUR); //truncate due to no integer division in javascript
-            var minutePart = minutes % MINUTES_IN_AN_HOUR; //modulus to get hours
-
-            if (hourPart < 10) //add leading zero if necessary
-                hourPart = "0" + hourPart;
-            if (minutePart < 10 )
-                minutePart = "0" + minutePart;
-
-            HHMMString = hourPart + ":" + minutePart; //format as "HH:MM" string
-            return HHMMString;
-        };
         Polymer('one-shift', {
             width: 0,
             week: null,
-            repeatWeek: null,
+            //repeatWeek: null,
             dragged: false,
             workplaceCode: "",
             employeeCode: "",
@@ -54,6 +40,21 @@
             numberOfShiftsWide: 1,
             shiftPosition: 1,
             pxWidth: 0,
+            pxHeight: 0,
+            minutesToHHMMString: function(minutes) {
+                var HHMMString = "";
+                minutes = parseInt(minutes, 10); //make sure integer
+                var hourPart = Math.floor(minutes / MINUTES_IN_AN_HOUR); //truncate due to no integer division in javascript
+                var minutePart = minutes % MINUTES_IN_AN_HOUR; //modulus to get hours
+
+                if (hourPart < 10) //add leading zero if necessary
+                    hourPart = "0" + hourPart;
+                if (minutePart < 10 )
+                    minutePart = "0" + minutePart;
+
+                HHMMString = hourPart + ":" + minutePart; //format as "HH:MM" string
+                return HHMMString;
+            },
             oneShiftDragStart: function(event, detail, sender) {
                 var self = this;
                 var dragInfo = event.detail; //has to be event.detail, detail does not work. (core-drag-drop functionality)
@@ -120,23 +121,26 @@
             },
             ready: function() {
                 var self = this;
-                this.workplaceCode = this.shiftData.workplaceCode || this.workplaceCode;
-                this.employeeCode = this.shiftData.employeeCode || this.employeeCode;
-                this.shiftCode = this.shiftData.shiftCode || this.shiftCode;
-                this.bgColor = this.shiftData.bgColor || this.bgColor;
-                this.color = this.shiftData.color || this.color;
+                //todo: check that all needed data exist or something
+                this.workplaceCode = this.shiftData.workplace.code || this.workplaceCode;
+                this.employeeCode = this.shiftData.employee.code || this.employeeCode;
+                this.shiftCode = this.shiftData.code || this.shiftCode;
+                this.bgColor = this.shiftData.employee.bgColor || this.bgColor;
+                this.color = this.shiftData.employee.color || this.color;
                 this.startTime = this.shiftData.startTime || this.startTime;
                 this.endTime = this.shiftData.endTime || this.endTime;
                 this.dayOfWeek = this.shiftData.dayOfWeek || this.dayOfWeek;
                 this.numberOfShiftsWide = this.shiftData.numberOfShiftsWide || this.numberOfShiftsWide;
                 this.shiftPosition = this.shiftData.shiftPosition || this.shiftPosition;
                 this.pxWidth = this.shiftData.pxWidth || this.pxWidth;
-
-                this.style.height = this.calcMinutesOfCurrentDay() / 5 + 'px';
+                this.pxHeight = this.shiftData.pxHeight || this.pxHeight;
                 this.style.backgroundColor = this.bgColor;
-                this.style.top = this.startTime / 5 + "px";
 
                 this.addEventListener('drag-start', self.oneShiftDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
+            },
+            pxDayHeightChanged: function(oldValue, newValue) {
+                this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
+                this.style.top = this.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5+ "px";
             },
             draggedChanged: function(oldValue, newValue) {
                 if (newValue === true) {
