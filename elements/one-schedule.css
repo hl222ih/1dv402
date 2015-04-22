@@ -1,7 +1,9 @@
 :host {
+    opacity: 1;
+    transition: opacity 500ms ease-in-out;
     display: block;
-    width: 95vw;
-    height: 95vh;
+    width: 100vw;
+    height: 100vh;
 }
 
 #headerContainer {
@@ -19,4 +21,51 @@
     width: 90%;
     background-color: #ffffed;
     overflow: auto;
+}
+
+paper-button::shadow #ripple {
+    color: blue;
+}
+
+paper-button[active] {
+    background-color: lightskyblue;
+    color: white;
+    box-sizing: border-box;
+
+}
+paper-button:not([active]) {
+    background-color: rgba(0,0,0,0.10);
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+paper-button {
+    display: inline-block;
+    width: 10%;
+    height: 90%;
+    min-width: 10%;
+    min-height: 33%;
+    font-size: 20%;
+    box-sizing: border-box;
+    text-align: center;
+    margin: 0;
+}
+
+.selectContainer {
+    display: inline-block;
+    width: 30%;
+    height: 90%;
+    border: 1px solid salmon;
+}
+
+#scheduleSelectContainer {
+    width: 20%;
+}
+
+#employeeSelectContainer {
+    width: 30%;
+}
+
+#shiftSelectContainer {
+    width: 45%;
 }

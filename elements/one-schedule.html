@@ -2,18 +2,24 @@
 <link rel="import" href="../bower_components/paper-slider/paper-slider.html"/>
 <link rel="import" href="one-week.html"/>
 <link rel="import" href="one-shift.html"/><!--temp-->
+<link rel="import" href="../bower_components/paper-button/paper-button.html"/>
 
-<polymer-element name="one-schedule" on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd" on-shiftdragstartinweek="shiftDragStart" on-shiftdragendinweek="shiftDragEnd">
+<polymer-element unresolved name="one-schedule" on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd" on-shiftdragstartinweek="shiftDragStart" on-shiftdragendinweek="shiftDragEnd">
     <template>
         <link rel="stylesheet" href="one-schedule.css" type="text/css">
         <div id="headerContainer">
-
-            <one-shift shiftData="{{tempData}}"></one-shift>
+            <div id="scheduleSelectContainer" class="selectContainer">
+            </div>
+            <div id="employeeSelectContainer" class="selectContainer">
+                <!--<one-shift shiftData="{{tempData}}"></one-shift>-->
+            </div>
+            <div id="shiftSelectContainer" class="selectContainer">
+            </div>
         </div>
         <div id="scheduleContainer">
-            <paper-slider id="paperSlider" min="100" max="1000" value="{{pxWeekWidth}}" immediateValue="{{pxWeekWidth}}"></paper-slider>
+            <paper-slider id="paperSlider" min="300" max="900" value="[[pxWeekWidth]]" immediateValue="{{pxWeekWidth}}"></paper-slider>
             <template repeat="{{weekSchedule, index in currentSchedule.weekSchedules}}">
-                <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 288 / 420 / 1.66}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}"></one-week>
+                <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 288 / 420 / 1.66}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
             </template>
         </div>
     </template>
@@ -169,7 +175,8 @@
             shiftDragEnd: function() {
                 this.style.cursor = "default";
                 this.$.paperSlider.style.cursor = "default";
-            }
+            },
+            dragInfo: {}
         });
     </script>
 </polymer-element>

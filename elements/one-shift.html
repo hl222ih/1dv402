@@ -1,10 +1,12 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
+<link rel="import" href="../bower_components/core-icons/core-icons.html">
 
-<polymer-element draggable="false" name="one-shift" attributes="shiftData pxDayHeight">
+<polymer-element draggable="false" name="one-shift" attributes="shiftData pxDayHeight dragInfo">
+
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
-
+        <!-- conditionally: <core-icon id="errorIcon" icon="warning"></core-icon>-->
         <core-drag-drop></core-drag-drop>
         <!--
             changed
@@ -13,167 +15,207 @@
                 Polymer.addEventListener(this.parentNode.host, event, this[handler].bind(this));
             otherwise core-drag-drop will only listen to dragging child elements, not the Polymer element itself
         -->
-
         <div id="shiftCode" draggable="false">{{shiftCode}}</div>
         <div id="workplaceCode">{{workplaceCode}}</div>
-        <div id="employeeCode">{{employeeCode}}</div>
+        <template repeat="{{employeeCode in employeeCodes}}">
+            <div id="employeeCode" style="border: 1px solid black; z-index: 1; box-sizing: border-box;">{{employeeCode}}</div>
+        </template>
         <div id="displayTime">{{startTime|minutesToHHMMString }}-{{endTime|minutesToHHMMString}}</div>
     </template>
     <script>
-        var DAYS_IN_A_WEEK = 7;
-        var MINUTES_IN_A_DAY = 1440;
-        var MINUTES_IN_AN_HOUR = 60;
+        (function() {
+            var DAYS_IN_A_WEEK = 7;
+            var MINUTES_IN_A_DAY = 1440;
+            var MINUTES_IN_AN_HOUR = 60;
 
-        Polymer('one-shift', {
-            width: 0,
-            week: null,
-            //repeatWeek: null,
-            dragged: false,
-            workplaceCode: "",
-            employeeCode: "",
-            shiftCode: "",
-            bgColor: "#eee",
-            color: "#000",
-            startTime: 0,
-            endTime: 0,
-            dayOfWeek: 1,
-            numberOfShiftsWide: 1,
-            shiftPosition: 1,
-            pxWidth: 0,
-            pxHeight: 0,
-            minutesToHHMMString: function(minutes) {
-                var HHMMString = "";
-                minutes = parseInt(minutes, 10); //make sure integer
-                var hourPart = Math.floor(minutes / MINUTES_IN_AN_HOUR); //truncate due to no integer division in javascript
-                var minutePart = minutes % MINUTES_IN_AN_HOUR; //modulus to get hours
+            Polymer('one-shift', {
+                width: 0,
+                week: null,
+                //repeatWeek: null,
+                dragged: false,
+                workplaceCode: "",
+                //employeeCodes: [], property cannot be set to the prototype
+                shiftCode: "",
+                bgColor: "#eee",
+                color: "#000",
+                startTime: 0,
+                endTime: 0,
+                dayOfWeek: 1,
+                numberOfShiftsWide: 1,
+                shiftPosition: 1,
+                pxWidth: 0,
+                pxHeight: 0,
+                dragInfo: {},
+                minutesToHHMMString: function (minutes) {
+                    var HHMMString = "";
+                    minutes = parseInt(minutes, 10); //make sure integer
+                    var hourPart = Math.floor(minutes / MINUTES_IN_AN_HOUR); //truncate due to no integer division in javascript
+                    var minutePart = minutes % MINUTES_IN_AN_HOUR; //modulus to get hours
 
-                if (hourPart < 10) //add leading zero if necessary
-                    hourPart = "0" + hourPart;
-                if (minutePart < 10 )
-                    minutePart = "0" + minutePart;
+                    if (hourPart < 10) //add leading zero if necessary
+                        hourPart = "0" + hourPart;
+                    if (minutePart < 10)
+                        minutePart = "0" + minutePart;
 
-                HHMMString = hourPart + ":" + minutePart; //format as "HH:MM" string
-                return HHMMString;
-            },
-            oneShiftDragStart: function(event, detail, sender) {
-                var self = this;
-                var dragInfo = event.detail; //has to be event.detail, detail does not work. (core-drag-drop functionality)
-                dragInfo.avatar.style.cssText = 'z-index: 1000; left: -14px; top: -8px; border: 2px solid blue'  + '; width: 24px; height: 12px; border-radius: 50%; background-color: rgba(0,0,0,0)'; //should be done better
-                dragInfo.draggedItem = this;
-                dragInfo.dropTarget = null;
-                self.dragged = true;
-                dragInfo.drag = function(dragInfo) {
-                    var draggedItem = dragInfo.draggedItem;
-                    //added specialRelatedTarget = inEvent.currentTarget to var gestureProto = { ... } in Polymer.js
-                    //to make dropTarget available in drag (track) event.
-                    var dropTarget = dragInfo.event.specialRelatedTarget;
-                    if (dropTarget !== draggedItem) {
-                        if (dropTarget.id === "oneShift") {
-                            self.addStyleToTargetOneShift(dropTarget);
-                            dragInfo.dropTarget = dropTarget;
-                        } else {
+                    HHMMString = hourPart + ":" + minutePart; //format as "HH:MM" string
+                    return HHMMString;
+                },
+                oneShiftDragStart: function (event, detail, sender) {
+                    var self = this;
+                    var dragInfo = event.detail; //has to be event.detail, detail does not work. (core-drag-drop functionality)
+                    this.dragInfo = dragInfo; //binding to the rest of the application
+                    dragInfo.subElement = this.target;
+                    dragInfo.avatar.style.cssText = 'z-index: 1000; left: -14px; top: -8px; border: 1px solid gray' + '; width: 24px; height: 12px; border-radius: 25%; text-align: center;'; //should be done better
+                    if (dragInfo.subElement.id === "employeeCode") {
+                        dragInfo.avatar.style.backgroundColor = this.bgColor;
+                        dragInfo.avatar.innerText = this.target.innerText;
+                        dragInfo.draggedType = "employee";
+                    } else {
+                        dragInfo.avatar.style.backgroundColor = "lightgrey";
+                        dragInfo.avatar.innerText = this.shiftCode;
+                        dragInfo.draggedType = "shift";
+                    }
+
+                    dragInfo.avatar.style.fontSize = "60%";
+                    dragInfo.draggedItem = this;
+                    dragInfo.dropTarget = null;
+                    self.dragged = true;
+                    dragInfo.drag = function (dragInfo) {
+                        var draggedItem = dragInfo.draggedItem;
+                        //added specialRelatedTarget = inEvent.currentTarget to var gestureProto = { ... } in polymer.js
+                        //to make dropTarget available in drag (track) event.
+                        var dropTarget = dragInfo.event.specialRelatedTarget;
+                        var dropSubTarget = dragInfo.event.specialRelatedSubTarget; //temp test
+                        if (dropTarget !== draggedItem) {
+                            if (dropTarget.id === "oneShift") {
+                                self.addStyleToTargetOneShift(dropTarget);
+                                dragInfo.dropTarget = dropTarget;
+                            } else if (dropSubTarget.id === "oneWeek") {
+                                self.addStyleToTargetWeekDay(dropSubTarget);
+                                //dropTarget = dragInfo.dropTarget;
+                            } else {
+                                dropTarget = dragInfo.dropTarget;
+                                self.resetStyleForTargetOneShift(dropTarget);
+                            }
+                        }
+                        else {
                             dropTarget = dragInfo.dropTarget;
                             self.resetStyleForTargetOneShift(dropTarget);
                         }
-                    }
-                    else {
-                        dropTarget = dragInfo.dropTarget;
+                    }; //seems to be needed to trigger some functionality in core-drag-drop
+                    dragInfo.drop = function (dragInfo) {
+                        //var dropTarget = dragInfo.event.relatedTarget;
+                        var dropTarget = dragInfo.dropTarget;
+                        if (dropTarget != null) {
+                            dropTarget.style.backgroundColor = "red";
+                        }
+                        if (dragInfo.event.relatedTarget && dragInfo.event.relatedTarget.id === "weekDay") {
+                            if (dragInfo.event.relatedTarget.classList) {
+                                dragInfo.event.relatedTarget.classList.remove('dragShiftHover');
+                            }
+                        }
+                        self.dragged = false;
+                        self.dragInfo = {};
                         self.resetStyleForTargetOneShift(dropTarget);
+                    };
+                },
+                calcMinutes: function () {
+                    var minutes = 0;
+                    if (this.startTime >= this.endTime)
+                        minutes += MINUTES_IN_A_DAY;
+                    minutes += this.endTime - this.startTime;
+                    return minutes;
+                },
+                calcMinutesOfCurrentDay: function () {
+                    var minutes = 0;
+                    if (this.startTime >= this.endTime)
+                        minutes = MINUTES_IN_A_DAY - this.startTime;
+                    else
+                        minutes = this.endTime - this.startTime;
+                    return minutes;
+                },
+                calcMinutesOfNextDay: function () {
+                    var minutes = 0;
+                    if (this.startTime >= this.endTime)
+                        minutes = this.startTime;
+                    return minutes;
+                },
+                displayStartTime: function () {
+                    return minutesToHHMMString(this.startTime);
+                },
+                displayEndTime: function () {
+                    return minutesToHHMMString(this.endTime);
+                },
+                created: function() {
+                },
+                ready: function () {
+                    var self = this;
+                    //todo: check that all needed data exist or something
+                    this.workplaceCode = this.shiftData.workplace.code || this.workplaceCode;
+                    if (this.shiftData.employee.code) {
+                        this.employeeCodes = this.employeeCodes ? this.employeeCodes : [];
+                        this.employeeCodes.push(this.shiftData.employee.code);
                     }
-                }; //seems to be needed to trigger some functionality in core-drag-drop
-                dragInfo.drop = function (dragInfo) {
-                    //var dropTarget = dragInfo.event.relatedTarget;
-                    var dropTarget = dragInfo.dropTarget;
-                    if (dropTarget != null) {
-                        dropTarget.style.backgroundColor = "red";
+                    this.shiftCode = this.shiftData.code || this.shiftCode;
+                    this.bgColor = this.shiftData.employee.bgColor || this.bgColor;
+                    this.color = this.shiftData.employee.color || this.color;
+                    this.startTime = this.shiftData.startTime || this.startTime;
+                    this.endTime = this.shiftData.endTime || this.endTime;
+                    this.dayOfWeek = this.shiftData.dayOfWeek || this.dayOfWeek;
+                    this.numberOfShiftsWide = this.shiftData.numberOfShiftsWide || this.numberOfShiftsWide;
+                    this.shiftPosition = this.shiftData.shiftPosition || this.shiftPosition;
+                    this.pxWidth = this.shiftData.pxWidth || this.pxWidth;
+                    this.pxHeight = this.shiftData.pxHeight || this.pxHeight;
+                    this.style.backgroundColor = this.bgColor;
+
+                    this.addEventListener('drag-start', self.oneShiftDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
+                    this.addEventListener('down', function (event) {
+                        this.target = event._target; //needed to distinguish between shift itself or just the employee being dragged
+                    },this)
+                },
+                pxDayHeightChanged: function (oldValue, newValue) {
+                    this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
+                    this.style.top = this.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
+                },
+                draggedChanged: function (oldValue, newValue) {
+                    if (newValue === true) {
+                        this.fire('shiftdragstart');
+                    } else if (newValue === false) {
+                        this.fire('shiftdragend');
                     }
-                    self.dragged = false;
-
-                    self.resetStyleForTargetOneShift(dropTarget);
-                };
-            },
-            calcMinutes: function() {
-                var minutes = 0;
-                if (this.startTime >= this.endTime)
-                    minutes += MINUTES_IN_A_DAY;
-                minutes += this.endTime - this.startTime;
-                return minutes;
-            },
-            calcMinutesOfCurrentDay: function() {
-                var minutes = 0;
-                if (this.startTime >= this.endTime)
-                    minutes = MINUTES_IN_A_DAY - this.startTime;
-                else
-                    minutes = this.endTime - this.startTime;
-                return minutes;
-            },
-            calcMinutesOfNextDay: function() {
-                var minutes = 0;
-                if (this.startTime >= this.endTime)
-                    minutes = this.startTime;
-                return minutes;
-            },
-            displayStartTime: function () {
-                return minutesToHHMMString(this.startTime);
-            },
-            displayEndTime: function () {
-                return minutesToHHMMString(this.endTime);
-            },
-            ready: function() {
-                var self = this;
-                //todo: check that all needed data exist or something
-                this.workplaceCode = this.shiftData.workplace.code || this.workplaceCode;
-                this.employeeCode = this.shiftData.employee.code || this.employeeCode;
-                this.shiftCode = this.shiftData.code || this.shiftCode;
-                this.bgColor = this.shiftData.employee.bgColor || this.bgColor;
-                this.color = this.shiftData.employee.color || this.color;
-                this.startTime = this.shiftData.startTime || this.startTime;
-                this.endTime = this.shiftData.endTime || this.endTime;
-                this.dayOfWeek = this.shiftData.dayOfWeek || this.dayOfWeek;
-                this.numberOfShiftsWide = this.shiftData.numberOfShiftsWide || this.numberOfShiftsWide;
-                this.shiftPosition = this.shiftData.shiftPosition || this.shiftPosition;
-                this.pxWidth = this.shiftData.pxWidth || this.pxWidth;
-                this.pxHeight = this.shiftData.pxHeight || this.pxHeight;
-                this.style.backgroundColor = this.bgColor;
-
-                this.addEventListener('drag-start', self.oneShiftDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
-            },
-            pxDayHeightChanged: function(oldValue, newValue) {
-                this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
-                this.style.top = this.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5+ "px";
-            },
-            draggedChanged: function(oldValue, newValue) {
-                if (newValue === true) {
-                    this.fire('shiftdragstart');
-                } else if (newValue === false) {
-                    this.fire('shiftdragend');
-                }
-            },
-            domReady: function() {
-                this.style.width = (100/DAYS_IN_A_WEEK/this.numberOfShiftsWide) + "%";
-                this.style.left = (427/428*100/DAYS_IN_A_WEEK * (this.dayOfWeek - 1) + (this.shiftPosition - 1) * 100/DAYS_IN_A_WEEK/this.numberOfShiftsWide) + "%";
-                var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
-                    pxHeight = parseFloat(getComputedStyle(this).height, 10),
-                    width = pxWidth * 5,
-                    height = pxHeight * 5,
-                    minuteHeight = height / MINUTES_IN_A_DAY;
-            },
-            addStyleToTargetOneShift: function (targetOneShift) {
-                if (targetOneShift != null && ("style" in targetOneShift)) {
-                    targetOneShift.style.border = "3px solid lightgreen";
-                    targetOneShift.style.transform = "translate(-3px, -3px)";
-                    targetOneShift.style.zIndex = "1";
-                }
-            },
-            resetStyleForTargetOneShift: function (targetOneShift) {
-                if (targetOneShift != null && ("style" in targetOneShift)) {
-                    targetOneShift.style.border = null;
-                    targetOneShift.style.transform = null;
-                    targetOneShift.style.zIndex = null;
+                },
+                domReady: function () {
+                    this.style.width = (100 / DAYS_IN_A_WEEK / this.numberOfShiftsWide) + "%";
+                    this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (this.dayOfWeek - 1) + (this.shiftPosition - 1) * 100 / DAYS_IN_A_WEEK / this.numberOfShiftsWide) + "%";
+                    var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
+                            pxHeight = parseFloat(getComputedStyle(this).height, 10),
+                            width = pxWidth * 5,
+                            height = pxHeight * 5,
+                            minuteHeight = height / MINUTES_IN_A_DAY;
+                },
+                addStyleToTargetOneShift: function (targetOneShift) {
+                    if (targetOneShift != null && ("style" in targetOneShift)) {
+                        targetOneShift.style.border = "3px solid lightgreen";
+                        targetOneShift.style.transform = "translate(-3px, -3px)";
+                        targetOneShift.style.zIndex = "1";
+                    }
+                },
+                resetStyleForTargetOneShift: function (targetOneShift) {
+                    if (targetOneShift != null && ("style" in targetOneShift)) {
+                        targetOneShift.style.border = null;
+                        targetOneShift.style.transform = null;
+                        targetOneShift.style.zIndex = null;
+                    }
+                },
+                addStyleToTargetWeekDay: function (targetWeekDay) {
+                    if (targetWeekDay != null && ("style" in targetWeekDay)) {
+                        targetWeekDay.style.border = "3px solid lightgreen";
+                        targetWeekDay.style.transform = "translate(-3px, -3px)";
+                        targetWeekDay.style.zIndex = "1";
+                    }
                 }
 
-            }
-
-        });
+            });
+        })();
     </script>
 </polymer-element>

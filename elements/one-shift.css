@@ -11,3 +11,17 @@
 #shiftCode, #workplaceCode, #employeeCode {
     text-align: center;
 }
+
+#errorIcon {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    height: 14px;
+    width: 14px;
+
+    /*color: black;
+    background-color: yellow;*/
+    stroke: black;
+    fill: yellow;
+    stroke-width: 1;
+}

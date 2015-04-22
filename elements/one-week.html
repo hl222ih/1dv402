@@ -1,212 +1,247 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="one-shift.html"/>
 
-<polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout"  on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd">
+<polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout dragInfo"  on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd">
     <template>
         <link rel="stylesheet" href="one-week.css" type="text/css">
-
+        <template bind="{{dragInfo}}">
+            -{{draggedType}}-
+        </template>
         <div id="weekSchedule" draggable="false">
+            <template repeat="{{weekDay, weekIndex in weekDays}}">
+                <div draggable="false" id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="position: absolute; z-index: 0; width: {{pxDayWidth}}px; left: {{weekIndex|pxDayLeftPosition}}px; height: {{pxHeight}}px; background-color: rgba(0,0,0,0.50)"><!--{{weekIndex|weekDayByIndex}}--></div>
+            </template>
             <template repeat="{{shift, index in shifts}}">
-                <one-shift id="oneShift" index="{{index}}" shiftData="{{shift}}" pxDayHeight="{{pxHeight}}"></one-shift>
+                <one-shift id="oneShift" index="{{index}}" shiftData="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}"></one-shift>
             </template>
         </div>
         <div id="weekScheduleOverlay" draggable="false"></div>
     </template>
     <script>
-        var DAYS_IN_A_WEEK = 7;
-        var MINUTES_IN_A_DAY = 1440;
-        var MINUTES_IN_AN_HOUR = 60;
-        var HOURS_IN_A_DAY = 24;
-        var NUMBER_OF_VERTICAL_LINES = DAYS_IN_A_WEEK + 1;
-        var VIEWBOX_MULTIPLIER = 5;
+        (function() {
+            var DAYS_IN_A_WEEK = 7;
+            var MINUTES_IN_A_DAY = 1440;
+            var MINUTES_IN_AN_HOUR = 60;
+            var HOURS_IN_A_DAY = 24;
+            var NUMBER_OF_VERTICAL_LINES = DAYS_IN_A_WEEK + 1;
+            var VIEWBOX_MULTIPLIER = 5;
 
-        Polymer('one-week', {
-            weekNumber: 1,
-            shifts: [],
-            /*shifts: [{
-                dayOfWeek: 1,
-                bgColor: '#ffcc66',
-                color: 'black',
-                workplaceCode: "Tg.",
-                employeeCode: "RR",
-                shiftCode: "A2",
-                startTime: 420,
-                endTime: 1020,
-                week: 2,
-                repeatWeek: 2,
-                numberOfShiftsWide: 2,
-                shiftPosition: 1,
-                pxWidth: 60
-            },
-            {
-                dayOfWeek: 3,
-                bgColor: '#ffcc66',
-                color: 'black',
-                workplaceCode: "Tg.",
-                employeeCode: "RR",
-                shiftCode: "A1",
-                startTime: 420,
-                endTime: 960,
-                week: 2,
-                repeatWeek: 2,
-                numberOfShiftsWide: 2,
-                shiftPosition: 2,
-                pxWidth: 60
-            }],*/
-            shiftsChanged: function(x) {
-                //x[0]: index: 0, removed: [shift, shift, ...], addedCount: 0
-                //alert("shifts changed " + this.shifts + ": " + JSON.stringify(x[0]));
-                //alert("added " + this.shifts[x[0].index-1].pxWidth);
-                //this.shifts[x[0].index-1].addEventListener('started-dragging', function() {
-                //    alert("got here");
-                //});
-            },
-            pxWidth: 420,
-            pxWidthChanged: function() {
-                this.preRenderSchedule();
-                this.renderSchedule();
-            },
-            pxHeight: 288,
-            strokeWidth: 1,
-            preRenderSchedule: function() {
-                if (this.layout === 1) {
-                    if (this.weekNumber === 1) {
-                        this.style.left = "20px";
-                        this.style.top = "30px";
+            Polymer('one-week', {
+                activeOver: {},
+                dragInfo: {},
+                mouseOverWeekDay: function(e) {
+                    this.activeOver = e.currentTarget;
+                    if (this.dragInfo.draggedType === "shift") {
+                        e.currentTarget.classList.add('dragShiftHover');
                     }
-                }
-                else if (this.layout === 2) {
-                    if (this.weekNumber === 1) {
-                        this.style.left = "20px";
-                        this.style.top = "30px";
-                    } else if (this.weekNumber === 2) {
-                        this.style.left = (30 + this.pxWidth + NUMBER_OF_VERTICAL_LINES) + "px";
-                        this.style.top = "30px";
-                    }
-                }
-                else if (this.layout === 3) {
-                    if (this.weekNumber === 1) {
-                        this.style.left = "20px";
-                        this.style.top = "30px";
-                    } else if (this.weekNumber === 2) {
-                        this.style.left = (30 + this.pxWidth + NUMBER_OF_VERTICAL_LINES) + "px";
-                        this.style.top = "30px";
-                    } else if (this.weekNumber === 3) {
-                        this.style.left = (40 + this.pxWidth * 2 + NUMBER_OF_VERTICAL_LINES * 2 ) + "px";
-                        this.style.top = "30px";
-                    }
-                }
-                else if (this.layout === 4) {
-                    if (this.weekNumber === 1) {
-                        this.style.left = "20px";
-                        this.style.top = "30px";
-                    } else if (this.weekNumber === 2) {
-                        this.style.left = (30 + this.pxWidth + NUMBER_OF_VERTICAL_LINES) + "px";
-                        this.style.top = "30px";
-                    } else if (this.weekNumber === 3) {
-                        this.style.left = "20px";
-                        this.style.top = (40 + this.pxHeight) + "px";
-                    } else if (this.weekNumber === 4) {
-                        this.style.left = (30 + this.pxWidth + NUMBER_OF_VERTICAL_LINES) + "px";
-                        this.style.top = (40 + this.pxHeight) + "px";
-                    }
-                }
-
-                this.style.width = (this.pxWidth + NUMBER_OF_VERTICAL_LINES) + 'px'; //10px between weekSchedules
-                this.style.height = this.pxHeight + 'px';
-
-            },
-            renderSchedule: function() {
-                var strokeWidth = this.strokeWidth;
-                var pxWidth = this.pxWidth + NUMBER_OF_VERTICAL_LINES; //why here and not for this.pxWidth?
-                var pxHeight = this.pxHeight;
-                var width = pxWidth * VIEWBOX_MULTIPLIER;
-                var height = pxHeight * VIEWBOX_MULTIPLIER;
-                var minuteHeight = height / MINUTES_IN_A_DAY;
-                var dayWidth = (width - (VIEWBOX_MULTIPLIER * NUMBER_OF_VERTICAL_LINES))/ DAYS_IN_A_WEEK;
-                var bgDraw;
-                if (this.bgDraw === undefined) {
-                    bgDraw = SVG(this.$.weekSchedule).fixSubPixelOffset().size(pxWidth, pxHeight).viewbox(-0.5, -0.5, width, height);
-                    this.bgDraw = bgDraw;
-                    bgDraw.rect(width,height).fill('#f0f0f0');
-                } else {
-                    bgDraw = this.bgDraw;
-                    bgDraw.clear();
-                    bgDraw.fixSubPixelOffset().size(pxWidth, pxHeight).viewbox(-0.5, -0.5, width, height);
-                    bgDraw.size(pxWidth, pxHeight).viewbox(-0.5, -0.5, width, height);
-                    bgDraw.rect(width,height).fill('#f0f0f0');
-                }
-
-
-                var draw;
-                if (this.draw === undefined) {
-                    draw = SVG(this.$.weekScheduleOverlay).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(-0.5,-0.5,width,height).attr({ fill: 'none', 'stroke-width': strokeWidth, stroke: 'blue'});
-                    this.draw = draw;
-                } else {
-                    draw = this.draw;
-                    draw.clear();
-                    draw.fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(-0.5,-0.5,width,height).attr({ fill: 'none', 'stroke-width': strokeWidth, stroke: 'blue'});
-                    draw.size(pxWidth,pxHeight).viewbox(-0.5,-0.5,width,height).attr({ fill: 'none', 'stroke-width': strokeWidth, stroke: 'blue'});
-                }
-
-                var path = '' +
-                            //between days lines
-                        'M ' + (dayWidth + VIEWBOX_MULTIPLIER) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 2) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 3) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 4) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 5) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                        'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 6) + ' 0'  + ' l 0 ' + (height) + ' ' +
-                            //border line
-                        'M ' + 0 + ' ' + 0 + ' l ' + (width - VIEWBOX_MULTIPLIER) + ' 0 0 ' + (height) + ' -' + (width - VIEWBOX_MULTIPLIER) + ' 0 0 -' + (height) + 'Z ';
-                //hour markers
-                var hourMarkerWidth = dayWidth / 30;
-                for (var hour = 1; hour < HOURS_IN_A_DAY; hour++) {
-                    for (var day = 1; day <= DAYS_IN_A_WEEK; day++) {
-                        path += 'M ' + ((day - 1) * (dayWidth + VIEWBOX_MULTIPLIER)) + ' ' + (hour * MINUTES_IN_AN_HOUR * minuteHeight) + ' l ' + hourMarkerWidth + ' 0 ';
-                        path += 'M ' + (day * dayWidth + day * VIEWBOX_MULTIPLIER - hourMarkerWidth) + ' ' + (hour * MINUTES_IN_AN_HOUR * minuteHeight) + ' l ' + hourMarkerWidth + ' 0 ';
-                    }
-                }
-                if (this.test === undefined) {
-                    draw.path(path);
-                    //draw.;
-                } else {
-                    draw.path().plot(path);
-//                    draw.plot(path);
-                }
-                this.test = "defined";
-            },
-            ready: function() {
-                this.shifts = this.data.shifts || this.shifts;
-            },
-            domReady: function() {
-
-
-                this.preRenderSchedule();
-                this.renderSchedule();
-
-                /*this.shifts.push({
-                    dayOfWeek: 7,
+                },
+                mouseOutOfWeekDay: function(e) {
+                    e.fromElement.classList.remove('dragShiftHover');
+                },
+                weekDayByIndex: function (index) {
+                    return this.weekDays[index];
+                },
+                weekDays: ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'],
+                weekNumber: 1,
+                pxDayLeftPosition: function (weekDayIndex) {
+                    return this.pxDayWidth * weekDayIndex;
+                },
+                shifts: [], /*shifts: [{
+                    dayOfWeek: 1,
                     bgColor: '#ffcc66',
                     color: 'black',
-                    workplaceCode: "T",
+                    workplaceCode: "Tg.",
                     employeeCode: "RR",
                     shiftCode: "A2",
-                    startTime: 450,
+                    startTime: 420,
+                    endTime: 1020,
+                    week: 2,
+                    repeatWeek: 2,
+                    numberOfShiftsWide: 2,
+                    shiftPosition: 1,
+                    pxWidth: 60
+                },
+                {
+                    dayOfWeek: 3,
+                    bgColor: '#ffcc66',
+                    color: 'black',
+                    workplaceCode: "Tg.",
+                    employeeCode: "RR",
+                    shiftCode: "A1",
+                    startTime: 420,
                     endTime: 960,
                     week: 2,
                     repeatWeek: 2,
                     numberOfShiftsWide: 2,
                     shiftPosition: 2,
                     pxWidth: 60
-                });*/
-            },
-            shiftDragStart: function() {
-                this.fire('shiftdragstartinweek');
-            },
-            shiftDragEnd: function() {
-                this.fire('shiftdragendinweek');
-            }
-        });
+                }],*/
+                shiftsChanged: function(x) {
+                    //x[0]: index: 0, removed: [shift, shift, ...], addedCount: 0
+                    //alert("shifts changed " + this.shifts + ": " + JSON.stringify(x[0]));
+                    //alert("added " + this.shifts[x[0].index-1].pxWidth);
+                    //this.shifts[x[0].index-1].addEventListener('started-dragging', function() {
+                    //    alert("got here");
+                    //});
+                },
+                pxWidth: 420,
+                pxWidthChanged: function() {
+                    this.preRenderSchedule();
+                    this.renderSchedule();
+                },
+                pxHeight: 288,
+                strokeWidth: 1,
+                preRenderSchedule: function() {
+                    if (this.layout === 1) {
+                        if (this.weekNumber === 1) {
+                            this.style.left = "20px";
+                            this.style.top = "30px";
+                        }
+                    }
+                    else if (this.layout === 2) {
+                        if (this.weekNumber === 1) {
+                            this.style.left = "20px";
+                            this.style.top = "30px";
+                        } else if (this.weekNumber === 2) {
+                            this.style.left = (30 + this.pxWidth + NUMBER_OF_VERTICAL_LINES) + "px";
+                            this.style.top = "30px";
+                        }
+                    }
+                    else if (this.layout === 3) {
+                        if (this.weekNumber === 1) {
+                            this.style.left = "20px";
+                            this.style.top = "30px";
+                        } else if (this.weekNumber === 2) {
+                            this.style.left = (30 + this.pxWidth + NUMBER_OF_VERTICAL_LINES) + "px";
+                            this.style.top = "30px";
+                        } else if (this.weekNumber === 3) {
+                            this.style.left = (40 + this.pxWidth * 2 + NUMBER_OF_VERTICAL_LINES * 2 ) + "px";
+                            this.style.top = "30px";
+                        }
+                    }
+                    else if (this.layout === 4) {
+                        if (this.weekNumber === 1) {
+                            this.style.left = "20px";
+                            this.style.top = "30px";
+                        } else if (this.weekNumber === 2) {
+                            this.style.left = (30 + this.pxWidth + NUMBER_OF_VERTICAL_LINES) + "px";
+                            this.style.top = "30px";
+                        } else if (this.weekNumber === 3) {
+                            this.style.left = "20px";
+                            this.style.top = (40 + this.pxHeight) + "px";
+                        } else if (this.weekNumber === 4) {
+                            this.style.left = (30 + this.pxWidth + NUMBER_OF_VERTICAL_LINES) + "px";
+                            this.style.top = (40 + this.pxHeight) + "px";
+                        }
+                    }
+
+                    this.style.width = (this.pxWidth + NUMBER_OF_VERTICAL_LINES) + 'px'; //10px between weekSchedules
+                    this.style.height = this.pxHeight + 'px';
+
+                },
+                renderSchedule: function() {
+                    var strokeWidth = this.strokeWidth;
+                    var pxWidth = this.pxWidth + NUMBER_OF_VERTICAL_LINES; //why here and not for this.pxWidth?
+                    var pxHeight = this.pxHeight;
+                    var width = pxWidth * VIEWBOX_MULTIPLIER;
+                    var height = pxHeight * VIEWBOX_MULTIPLIER;
+                    var minuteHeight = height / MINUTES_IN_A_DAY;
+                    var dayWidth = (width - (VIEWBOX_MULTIPLIER * NUMBER_OF_VERTICAL_LINES))/ DAYS_IN_A_WEEK;
+                    this.pxDayWidth = this.pxWidth /7 + this.strokeWidth;
+                    var bgDraw;
+                    if (this.bgDraw === undefined) {
+                        bgDraw = SVG(this.$.weekSchedule).fixSubPixelOffset().size(pxWidth, pxHeight).viewbox(-0.5, -0.5, width, height);
+                        this.bgDraw = bgDraw;
+                        bgDraw.rect(width,height).fill('#f0f0f0');
+                    } else {
+                        bgDraw = this.bgDraw;
+                        bgDraw.clear();
+                        bgDraw.fixSubPixelOffset().size(pxWidth, pxHeight).viewbox(-0.5, -0.5, width, height);
+                        bgDraw.size(pxWidth, pxHeight).viewbox(-0.5, -0.5, width, height);
+                        bgDraw.rect(width,height).fill('#f0f0f0');
+                    }
+
+
+                    var draw;
+                    if (this.draw === undefined) {
+                        draw = SVG(this.$.weekScheduleOverlay).fixSubPixelOffset().size(pxWidth,pxHeight).viewbox(-0.5,
+                                -0.5,width,height).attr({
+                                    fill: 'none',
+                                    'stroke-width': strokeWidth, stroke: 'blue'});
+                        this.draw = draw;
+                    } else {
+                        draw = this.draw;
+                        draw.clear();
+                        draw.fixSubPixelOffset().size(pxWidth,pxHeight)
+                                .viewbox(-0.5,-0.5,width,height).attr({
+                                    fill: 'none',
+                                    'stroke-width': strokeWidth, stroke: 'blue'});
+                        draw.size(pxWidth, pxHeight).viewbox(-0.5,-0.5,
+                                width,height).
+                                attr({ fill: 'none',
+                                    'stroke-width': strokeWidth, stroke: 'blue'});
+                    }
+
+                    var path = '' +
+                                //between days lines
+                            'M ' + (dayWidth + VIEWBOX_MULTIPLIER) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                            'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 2) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                            'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 3) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                            'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 4) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                            'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 5) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                            'M ' + ((dayWidth + VIEWBOX_MULTIPLIER) * 6) + ' 0'  + ' l 0 ' + (height) + ' ' +
+                                //border line
+                            'M ' + 0 + ' ' + 0 + ' l ' + (width - VIEWBOX_MULTIPLIER) + ' 0 0 ' + (height) + ' -' + (width - VIEWBOX_MULTIPLIER) + ' 0 0 -' + (height) + 'Z ';
+                    //hour markers
+                    var hourMarkerWidth = dayWidth / 30;
+                    for (var hour = 1; hour < HOURS_IN_A_DAY; hour++) {
+                        for (var day = 1; day <= DAYS_IN_A_WEEK; day++) {
+                            path += 'M ' + ((day - 1) * (dayWidth + VIEWBOX_MULTIPLIER)) + ' ' + (hour * MINUTES_IN_AN_HOUR * minuteHeight) + ' l ' + hourMarkerWidth + ' 0 ';
+                            path += 'M ' + (day * dayWidth + day * VIEWBOX_MULTIPLIER - hourMarkerWidth) + ' ' + (hour * MINUTES_IN_AN_HOUR * minuteHeight) + ' l ' + hourMarkerWidth + ' 0 ';
+                        }
+                    }
+                    if (this.test === undefined) {
+                        draw.path(path);
+                        //draw.;
+                    } else {
+                        draw.path().plot(path);
+                    // draw.plot(path);
+                    }
+                    this.test = "defined";
+                },
+                ready: function() {
+                    this.shifts = this.data.shifts || this.shifts;
+                },
+                domReady: function() {
+
+
+                    this.preRenderSchedule();
+                    this.renderSchedule();
+                    /*this.shifts.push({
+                        dayOfWeek: 7,
+                        bgColor: '#ffcc66',
+                        color: 'black',
+                        workplaceCode: "T",
+                        employeeCode: "RR",
+                        shiftCode: "A2",
+                        startTime: 450,
+                        endTime: 960,
+                        week: 2,
+                        repeatWeek: 2,
+                        numberOfShiftsWide: 2,
+                        shiftPosition: 2,
+                        pxWidth: 60
+                    });*/
+                },
+                shiftDragStart: function(event, detail, sender) {
+                    this.fire('shiftdragstartinweek');
+                },
+                shiftDragEnd: function(event, detail, sender) {
+                    this.fire('shiftdragendinweek');
+
+                }
+            });
+        })();
     </script>
 </polymer-element>

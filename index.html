@@ -7,19 +7,27 @@
     <link rel="import" href="elements/one-schedule.html"/>
     <title>Schedule</title>
     <style>
-        one-schedule {
-            opacity: 1;
-            transition: opacity 500ms ease-in;
+        @media print {
+            html, body {
+                display: block;
+                width: 100%;
+                height: 100%;
+                position: relative;
+            }
+            one-schedule {
+                display: block;
+                width: 100%;
+                height: 100%;
+                position: relative;
+            }
         }
-
-        one-schedule:unresolved {
+        [unresolved] {
             opacity: 0;
         }
-
     </style>
 </head>
 <body>
-    <one-schedule></one-schedule>
+    <one-schedule unresolved></one-schedule>
     <script src="scripts/app.js"></script>
     <script>
         window.onload = function () {};
