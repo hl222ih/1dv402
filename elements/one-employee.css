@@ -1,0 +1,12 @@
+:host {
+    position: relative;
+    display: inline-block;
+    border: 1px solid gray;
+    width: 26px;
+    height: 14px;
+    border-radius: 25%;
+    text-align: center;
+    cursor: default;
+    font-size: 10px;
+    box-sizing: border-box;
+}

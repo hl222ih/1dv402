@@ -1,8 +1,9 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="one-employee.html"/>
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
 
-<polymer-element draggable="false" name="one-shift" attributes="shiftData pxDayHeight dragInfo">
+<polymer-element draggable="false" name="one-shift" attributes="shift pxDayHeight dragInfo" on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
 
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
@@ -17,8 +18,11 @@
         -->
         <div id="shiftCode" draggable="false">{{shiftCode}}</div>
         <div id="workplaceCode">{{workplaceCode}}</div>
-        <template repeat="{{employeeCode in employeeCodes}}">
+        <!--<template repeat="{{employeeCode in employeeCodes}}">
             <div id="employeeCode" style="border: 1px solid black; z-index: 1; box-sizing: border-box;">{{employeeCode}}</div>
+        </template>-->
+        <template repeat="{{employee in shift.employees}}">
+            <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}}; width: 100%;"></one-employee>
         </template>
         <div id="displayTime">{{startTime|minutesToHHMMString }}-{{endTime|minutesToHHMMString}}</div>
     </template>
@@ -63,18 +67,15 @@
                 oneShiftDragStart: function (event, detail, sender) {
                     var self = this;
                     var dragInfo = event.detail; //has to be event.detail, detail does not work. (core-drag-drop functionality)
+                    if (!dragInfo.event.currentTarget || dragInfo.event.specialRelatedTarget.id !== "oneShift") return;
+
                     this.dragInfo = dragInfo; //binding to the rest of the application
                     dragInfo.subElement = this.target;
                     dragInfo.avatar.style.cssText = 'z-index: 1000; left: -14px; top: -8px; border: 1px solid gray' + '; width: 24px; height: 12px; border-radius: 25%; text-align: center;'; //should be done better
-                    if (dragInfo.subElement.id === "employeeCode") {
-                        dragInfo.avatar.style.backgroundColor = this.bgColor;
-                        dragInfo.avatar.innerText = this.target.innerText;
-                        dragInfo.draggedType = "employee";
-                    } else {
-                        dragInfo.avatar.style.backgroundColor = "lightgrey";
-                        dragInfo.avatar.innerText = this.shiftCode;
-                        dragInfo.draggedType = "shift";
-                    }
+
+                    dragInfo.avatar.style.backgroundColor = "lightgrey";
+                    dragInfo.avatar.innerText = this.shiftCode;
+                    dragInfo.draggedType = "shift";
 
                     dragInfo.avatar.style.fontSize = "60%";
                     dragInfo.draggedItem = this;
@@ -102,7 +103,7 @@
                             dropTarget = dragInfo.dropTarget;
                             self.resetStyleForTargetOneShift(dropTarget);
                         }
-                    }; //seems to be needed to trigger some functionality in core-drag-drop
+                    };
                     dragInfo.drop = function (dragInfo) {
                         //var dropTarget = dragInfo.event.relatedTarget;
                         var dropTarget = dragInfo.dropTarget;
@@ -151,22 +152,21 @@
                 ready: function () {
                     var self = this;
                     //todo: check that all needed data exist or something
-                    this.workplaceCode = this.shiftData.workplace.code || this.workplaceCode;
-                    if (this.shiftData.employee.code) {
+                    this.workplaceCode = this.shift.workplace.code || this.workplaceCode;
+                    if (this.shift.employee.code) {
                         this.employeeCodes = this.employeeCodes ? this.employeeCodes : [];
-                        this.employeeCodes.push(this.shiftData.employee.code);
+                        this.employeeCodes.push(this.shift.employee.code);
                     }
-                    this.shiftCode = this.shiftData.code || this.shiftCode;
-                    this.bgColor = this.shiftData.employee.bgColor || this.bgColor;
-                    this.color = this.shiftData.employee.color || this.color;
-                    this.startTime = this.shiftData.startTime || this.startTime;
-                    this.endTime = this.shiftData.endTime || this.endTime;
-                    this.dayOfWeek = this.shiftData.dayOfWeek || this.dayOfWeek;
-                    this.numberOfShiftsWide = this.shiftData.numberOfShiftsWide || this.numberOfShiftsWide;
-                    this.shiftPosition = this.shiftData.shiftPosition || this.shiftPosition;
-                    this.pxWidth = this.shiftData.pxWidth || this.pxWidth;
-                    this.pxHeight = this.shiftData.pxHeight || this.pxHeight;
-                    this.style.backgroundColor = this.bgColor;
+                    this.shiftCode = this.shift.code || this.shiftCode;
+                    this.bgColor = this.shift.employee.bgColor || this.bgColor;
+                    this.color = this.shift.employee.color || this.color;
+                    this.startTime = this.shift.startTime || this.startTime;
+                    this.endTime = this.shift.endTime || this.endTime;
+                    this.dayOfWeek = this.shift.dayOfWeek || this.dayOfWeek;
+                    this.numberOfShiftsWide = this.shift.numberOfShiftsWide || this.numberOfShiftsWide;
+                    this.shiftPosition = this.shift.shiftPosition || this.shiftPosition;
+                    this.pxWidth = this.shift.pxWidth || this.pxWidth;
+                    this.pxHeight = this.shift.pxHeight || this.pxHeight;
 
                     this.addEventListener('drag-start', self.oneShiftDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
                     this.addEventListener('down', function (event) {
@@ -213,8 +213,16 @@
                         targetWeekDay.style.transform = "translate(-3px, -3px)";
                         targetWeekDay.style.zIndex = "1";
                     }
+                },
+                mouseOverShift: function(e) {
+                    this.activeOver = e.currentTarget;
+                    if (this.dragInfo.draggedType === "employee") {
+                        e.currentTarget.classList.add('dragEmployeeHover');
+                    }
+                },
+                mouseOutOfShift: function(e) {
+                    e.fromElement.classList.remove('dragEmployeeHover');
                 }
-
             });
         })();
     </script>

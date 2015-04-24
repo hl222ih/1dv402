@@ -1,7 +1,8 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="../bower_components/paper-slider/paper-slider.html"/>
 <link rel="import" href="one-week.html"/>
-<link rel="import" href="one-shift.html"/><!--temp-->
+<link rel="import" href="one-shift.html"/>
+<link rel="import" href="one-employee.html"/>
 <link rel="import" href="../bower_components/paper-button/paper-button.html"/>
 
 <polymer-element unresolved name="one-schedule" on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd" on-shiftdragstartinweek="shiftDragStart" on-shiftdragendinweek="shiftDragEnd">
@@ -11,7 +12,9 @@
             <div id="scheduleSelectContainer" class="selectContainer">
             </div>
             <div id="employeeSelectContainer" class="selectContainer">
-                <!--<one-shift shiftData="{{tempData}}"></one-shift>-->
+                <template repeat="{{employee in currentSchedule.employees}}">
+                    <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
+                </template>
             </div>
             <div id="shiftSelectContainer" class="selectContainer">
             </div>
@@ -26,38 +29,39 @@
     <script src="../bower_components/svg.js/dist/svg.js"></script>
     <script>
         Polymer('one-schedule', {
-            tempData: {
-                workplace: {
-                    code: "testWP"
-                },
-                employee: {
-                    code: "EMP"
-                }
-            },
             pxWeekWidth: 420,
-            //pxWeekWidthChanged: function() {
-            //    this.currentSchedule.weekSchedules.forEach( function (weekSchedule) {
-            //        weekSchedule.pxWidth = this.pxWeekWidth;
-                    //    }, this);
-            //},
             currentSchedule: {
                 name: "",
-                weekSchedules: []
+                weekSchedules: [],
+                shiftDefinitions: [],
+                employees: []
             },
             schedules: [
                 {
                     name: "Schema 1",
                     numberOfWeeks: 4,
+                    employeeCodes: ["AA", "BB", "CC", "DD", "EE", "FF", "GG", "HH", "II", "JJ", "KK", "LL", "MM", "NN", "OO", "PP"],
                     shiftDefinitions: [
                         {
                             code: "A1",
                             startTime: 420,
                             endTime: 960
+                        },
+                        {
+                            code: "A2",
+                            startTime: 420,
+                            endTime: 930
+                        },
+                        {
+                            code: "C1",
+                            startTime: 930,
+                            endTime: 1260
                         }
                     ],
                     shifts: [
                         {
                             employeeCode: "AA",
+                            employeeCodes: ["AA"],
                             shiftCode: "A1",
                             workplaceCode: "WP1",
                             weeks: [1],
@@ -65,7 +69,8 @@
                         },
                         {
                             employeeCode: "BB",
-                            shiftCode: "A1",
+                            employeeCodes: ["AA", "BB"],
+                            shiftCode: "C1",
                             workplaceCode: "WP2",
                             weeks: [1,2],
                             dayOfWeek: 4
@@ -76,6 +81,7 @@
                 {
                     name: "Schema 2",
                     numberOfWeeks: 1,
+                    employeeCodes: ["AA", "BB"],
                     shiftDefinitions: [
                         {
                             code: "A1",
@@ -101,15 +107,110 @@
                     code: "AA",
                     name: "Agneta",
                     color: "black",
-                    bgColor: "lightgreen"
+                    bgColor: "#ffbaba"
                 },
                 {
                     code: "BB",
                     name: "Bertil",
                     color: "black",
-                    bgColor: "lightblue"
+                    bgColor: "#fff3ba"
+                },
+                {
+                    code: "CC",
+                    name: "Cecilia",
+                    color: "black",
+                    bgColor: "#baffba"
+                },
+                {
+                    code: "DD",
+                    name: "Denise",
+                    color: "black",
+                    bgColor: "#d1c2ff"
+                },
+                {
+                    code: "EE",
+                    name: "Erik",
+                    color: "black",
+                    bgColor: "#ffe2ba"
+                },
+                {
+                    code: "FF",
+                    name: "Felicia",
+                    color: "black",
+                    bgColor: "#f3ffba"
+                },
+                {
+                    code: "GG",
+                    name: "Gustav",
+                    color: "black",
+                    bgColor: "#bde2fd"
+                },
+                {
+                    code: "HH",
+                    name: "Hanna",
+                    color: "black",
+                    bgColor: "#fdb9fd"
+                },
+                {
+                    code: "II",
+                    name: "Ivar",
+                    color: "black",
+                    bgColor: "#ffd4ba"
+                },
+                {
+                    code: "JJ",
+                    name: "Johan",
+                    color: "black",
+                    bgColor: "#fffcba"
+                },
+                {
+                    code: "KK",
+                    name: "Kristina",
+                    color: "black",
+                    bgColor: "#b9fdec"
+                },
+                {
+                    code: "LL",
+                    name: "Linda",
+                    color: "black",
+                    bgColor: "#dfbefe"
+                },
+                {
+                    code: "MM",
+                    name: "Maria",
+                    color: "black",
+                    bgColor: "#ffebba"
+                },
+                {
+                    code: "NN",
+                    name: "Niclas",
+                    color: "black",
+                    bgColor: "#e1ffba"
+                },
+                {
+                    code: "OO",
+                    name: "Oscar",
+                    color: "black",
+                    bgColor: "#c2cbfe"
+                },
+                {
+                    code: "PP",
+                    name: "Pernilla",
+                    color: "black",
+                    bgColor: "#febad7"
                 }
             ],
+            employeeFromCode: function(employeeCode) {
+                var employees = this.employees.filter( function (employee) {
+                    return employee.code === employeeCode;
+                });
+                return employees.length > 0 ? employees[0] : {};
+            },
+            employeesFromCodes: function(employeeCodes) {
+                return this.employees.filter( function (employee) {
+                    return employeeCodes.indexOf(employee.code) > -1;
+                });
+            },
             ready: function () {
                 this.populateCurrentSchedule("Schema 1"); //pick first for now
             },
@@ -119,6 +220,10 @@
                 })[0];
 
                 if (scheduleData === null) return;
+
+                this.currentSchedule.shiftDefinitions = scheduleData.shiftDefinitions;
+
+                this.currentSchedule.employees = this.employeesFromCodes(scheduleData.employeeCodes);
 
                 this.currentSchedule.name = scheduleData.name;
                 this.currentSchedule.weekSchedules = [];
@@ -136,6 +241,7 @@
                             employee: this.employees.filter( function(employee) {
                                 return employee.code === shiftData.employeeCode;
                             })[0],
+                            employees: this.employeesFromCodes(shiftData.employeeCodes),
                             workplace: this.workplaces.filter( function(workplace) {
                                 return workplace.code === shiftData.workplaceCode;
                             })[0],
@@ -147,21 +253,10 @@
                             shiftPosition: 2
                         };
 
-                        //shiftCode: "A2",
-                        //startTime: 420,
-                        //endTime: 1020,
-                        //week: 2,
-                        //workplaceCode: "Tg.",
-                        //employeeCode: "RR",
-                        //dayOfWeek: 1,
-                        //bgColor: '#ffcc66',
-                        //color: 'black',
-                        //repeatWeek: 2, //not needed for now
                         //pxWidth: 60 //automatically calculated for now, might be needed?
 
                         //numberOfShiftsWide: 2,
                         //shiftPosition: 1,
-
 
                         this.currentSchedule.weekSchedules[i].shifts.push(shift);
                     }
@@ -169,14 +264,23 @@
                 //add some more stuff to each shift.
             },
             shiftDragStart: function() {
-                this.style.cursor = "none";
-                this.$.paperSlider.style.cursor = "none";
+                //this.style.cursor = "none";
+                //this.$.paperSlider.style.cursor = "none";
             },
             shiftDragEnd: function() {
-                this.style.cursor = "default";
-                this.$.paperSlider.style.cursor = "default";
+                //this.style.cursor = "default";
+                //this.$.paperSlider.style.cursor = "default";
             },
-            dragInfo: {}
+            dragInfo: {},
+            dragInfoChanged: function() {
+                if (Object.keys(this.dragInfo).length === 0) { //check if this.dragInfo is an empty object (no object is dragged -> cursor should be visible)
+                    this.style.cursor = "default";
+                    this.$.paperSlider.style.cursor = "default";
+                } else {
+                    this.style.cursor = "none";
+                    this.$.paperSlider.style.cursor = "none";
+                }
+            }
         });
     </script>
 </polymer-element>

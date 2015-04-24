@@ -5,15 +5,15 @@
 <polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout dragInfo"  on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd">
     <template>
         <link rel="stylesheet" href="one-week.css" type="text/css">
-        <template bind="{{dragInfo}}">
+        <!--test <template bind="{{dragInfo}}">
             -{{draggedType}}-
-        </template>
+        </template>-->
         <div id="weekSchedule" draggable="false">
             <template repeat="{{weekDay, weekIndex in weekDays}}">
-                <div draggable="false" id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="position: absolute; z-index: 0; width: {{pxDayWidth}}px; left: {{weekIndex|pxDayLeftPosition}}px; height: {{pxHeight}}px; background-color: rgba(0,0,0,0.50)"><!--{{weekIndex|weekDayByIndex}}--></div>
+                <div draggable="false" id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="width: {{pxDayWidth}}px; left: {{weekIndex|pxDayLeftPosition}}px; height: {{pxHeight}}px;"></div>
             </template>
             <template repeat="{{shift, index in shifts}}">
-                <one-shift id="oneShift" index="{{index}}" shiftData="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}"></one-shift>
+                <one-shift id="oneShift" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{shift|bgColorFromShift}}"></one-shift>
             </template>
         </div>
         <div id="weekScheduleOverlay" draggable="false"></div>
@@ -28,6 +28,13 @@
             var VIEWBOX_MULTIPLIER = 5;
 
             Polymer('one-week', {
+                bgColorFromShift: function(shift) {
+                    var colorCode = "#eee";
+                    if (shift.employees.length === 1) {
+                        colorCode = this.shift.employees[0].bgColor;
+                    }
+                    return colorCode;
+                },
                 activeOver: {},
                 dragInfo: {},
                 mouseOverWeekDay: function(e) {
@@ -47,44 +54,7 @@
                 pxDayLeftPosition: function (weekDayIndex) {
                     return this.pxDayWidth * weekDayIndex;
                 },
-                shifts: [], /*shifts: [{
-                    dayOfWeek: 1,
-                    bgColor: '#ffcc66',
-                    color: 'black',
-                    workplaceCode: "Tg.",
-                    employeeCode: "RR",
-                    shiftCode: "A2",
-                    startTime: 420,
-                    endTime: 1020,
-                    week: 2,
-                    repeatWeek: 2,
-                    numberOfShiftsWide: 2,
-                    shiftPosition: 1,
-                    pxWidth: 60
-                },
-                {
-                    dayOfWeek: 3,
-                    bgColor: '#ffcc66',
-                    color: 'black',
-                    workplaceCode: "Tg.",
-                    employeeCode: "RR",
-                    shiftCode: "A1",
-                    startTime: 420,
-                    endTime: 960,
-                    week: 2,
-                    repeatWeek: 2,
-                    numberOfShiftsWide: 2,
-                    shiftPosition: 2,
-                    pxWidth: 60
-                }],*/
-                shiftsChanged: function(x) {
-                    //x[0]: index: 0, removed: [shift, shift, ...], addedCount: 0
-                    //alert("shifts changed " + this.shifts + ": " + JSON.stringify(x[0]));
-                    //alert("added " + this.shifts[x[0].index-1].pxWidth);
-                    //this.shifts[x[0].index-1].addEventListener('started-dragging', function() {
-                    //    alert("got here");
-                    //});
-                },
+                shifts: [],
                 pxWidth: 420,
                 pxWidthChanged: function() {
                     this.preRenderSchedule();
@@ -214,25 +184,8 @@
                     this.shifts = this.data.shifts || this.shifts;
                 },
                 domReady: function() {
-
-
                     this.preRenderSchedule();
                     this.renderSchedule();
-                    /*this.shifts.push({
-                        dayOfWeek: 7,
-                        bgColor: '#ffcc66',
-                        color: 'black',
-                        workplaceCode: "T",
-                        employeeCode: "RR",
-                        shiftCode: "A2",
-                        startTime: 450,
-                        endTime: 960,
-                        week: 2,
-                        repeatWeek: 2,
-                        numberOfShiftsWide: 2,
-                        shiftPosition: 2,
-                        pxWidth: 60
-                    });*/
                 },
                 shiftDragStart: function(event, detail, sender) {
                     this.fire('shiftdragstartinweek');
