@@ -3,7 +3,7 @@
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
 
-<polymer-element draggable="false" name="one-shift" attributes="shift pxDayHeight dragInfo"  on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
+<polymer-element name="one-shift" attributes="shift pxDayHeight dragInfo"  on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
 
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
@@ -16,12 +16,12 @@
                 Polymer.addEventListener(this.parentNode.host, event, this[handler].bind(this));
             otherwise core-drag-drop will only listen to dragging child elements, not the Polymer element itself
         -->
-        <div id="shiftCode" draggable="false">{{shiftCode}}</div>
-        <div id="workplaceCode">{{workplaceCode}}</div>
+        <div id="shiftCode">{{shift.code}}</div>
+        <div id="workplaceCode">{{shift.workplace.code}}</div>
         <template repeat="{{employee in shift.employees}}">
             <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
         </template>
-        <div id="displayTime">{{startTime|minutesToHHMMString}}-{{endTime|minutesToHHMMString}}</div>
+        <div id="displayTime">{{shift.startTime|minutesToHHMMString}}-{{shift.endTime|minutesToHHMMString}}</div>
     </template>
     <script>
         (function() {
@@ -31,53 +31,45 @@
 
             Polymer('one-shift', {
                 observe: {
-                    'shift.employees' : 'domReady' //todo: better/more logic code
+                    'shift.employees' : 'updateStyles'
                 },
-                width: 0,
-                week: null,
-                //repeatWeek: null,
-                workplaceCode: "",
-                shiftCode: "",
-                bgColor: "#eee",
-                color: "#000",
-                startTime: 0,
-                endTime: 0,
-                dayOfWeek: 1,
-                numberOfShiftsWide: 1,
-                shiftPosition: 1,
-                pxWidth: 0,
-                pxHeight: 0,
                 dragInfo: {},
                 minutesToHHMMString: function (minutes) {
-                    var HHMMString = "";
-                    minutes = parseInt(minutes, 10); //make sure integer
-                    var hourPart = Math.floor(minutes / MINUTES_IN_AN_HOUR); //truncate due to no integer division in javascript
-                    var minutePart = minutes % MINUTES_IN_AN_HOUR; //modulus to get hours
+                    var HHMMString,
+                        hourPart = Math.floor(parseInt(minutes, 10) / MINUTES_IN_AN_HOUR), //make sure integer, truncate due to no integer division in javascript
+                        minutePart = parseInt(minutes, 10) % MINUTES_IN_AN_HOUR; //make sure integer, modulus to get hours
 
-                    if (hourPart < 10) //add leading zero if necessary
+                    //add leading zero if necessary
+                    if (hourPart < 10)
                         hourPart = "0" + hourPart;
                     if (minutePart < 10)
                         minutePart = "0" + minutePart;
 
-                    HHMMString = hourPart + ":" + minutePart; //format as "HH:MM" string
+                    //format as "HH:MM" string
+                    HHMMString = hourPart + ":" + minutePart;
+
                     return HHMMString;
                 },
                 oneShiftDragStart: function (event, detail, sender) {
                     var self = this;
                     var dragInfo = event.detail; //has to be event.detail, detail does not work. (core-drag-drop functionality)
+
+                    //make sure a oneShift is dragged (i.e. not an underlying oneEmployee)
                     if (!dragInfo.event.currentTarget || dragInfo.event.currentTarget.id !== "oneShift") return;
 
-                    this.dragInfo = dragInfo; //binding to the rest of the application
+                    this.dragInfo = dragInfo; //update bound dragInfo
+
+                    //style the drag avatar
                     dragInfo.avatar.style.cssText = 'z-index: 1000; left: -14px; top: -8px; border: 1px solid gray' + '; width: 24px; height: 12px; border-radius: 25%; text-align: center;'; //should be done better
-
                     dragInfo.avatar.style.backgroundColor = "lightgrey";
-                    dragInfo.avatar.innerText = this.shiftCode;
-
+                    dragInfo.avatar.innerText = this.shift.code;
                     dragInfo.avatar.style.fontSize = "60%";
+
                     dragInfo.draggedItem = this;
                     dragInfo.dropTarget = null;
                     dragInfo.downTarget = dragInfo.event.specialRelatedDownTarget;
 
+                    //needs to be declared, even if empty, due to implementation in core-drag-drop
                     dragInfo.drag = function (dragInfo) {
                         //to make dropTarget/downTarget available in drag (track) event some hooks are added in polymer.js
 
@@ -100,46 +92,48 @@
                     };
                 },
                 calcMinutes: function () {
-                    var minutes = 0;
-                    if (this.startTime >= this.endTime)
+                    var minutes = 0,
+                        startTime = this.shift.startTime,
+                        endTime = this.shift.endTime;
+
+                    if (startTime >= endTime)
                         minutes += MINUTES_IN_A_DAY;
-                    minutes += this.endTime - this.startTime;
+                    minutes += endTime - startTime;
+
                     return minutes;
                 },
                 calcMinutesOfCurrentDay: function () {
-                    var minutes = 0;
-                    if (this.startTime >= this.endTime)
-                        minutes = MINUTES_IN_A_DAY - this.startTime;
+                    var minutes = 0,
+                        startTime = this.shift.startTime,
+                        endTime = this.shift.endTime;
+
+                    if (startTime >= endTime)
+                        minutes = MINUTES_IN_A_DAY - startTime;
                     else
-                        minutes = this.endTime - this.startTime;
+                        minutes = endTime - startTime;
+
                     return minutes;
                 },
                 calcMinutesOfNextDay: function () {
-                    var minutes = 0;
-                    if (this.startTime >= this.endTime)
-                        minutes = this.startTime;
+                    var minutes = 0,
+                        startTime = this.shift.startTime,
+                        endTime = this.shift.endTime;
+
+                    if (startTime >= endTime)
+                        minutes = startTime;
+
                     return minutes;
                 },
                 displayStartTime: function () {
-                    return minutesToHHMMString(this.startTime);
+                    return minutesToHHMMString(this.shift.startTime);
                 },
                 displayEndTime: function () {
-                    return minutesToHHMMString(this.endTime);
-                },
-                created: function() {
-
+                    return minutesToHHMMString(this.shift.endTime);
                 },
                 ready: function () {
                     var self = this;
                     //todo: check that all needed data exist or something
-                    this.workplaceCode = this.shift.workplace.code || this.workplaceCode;
-                    this.shiftCode = this.shift.code || this.shiftCode;
 
-                    this.startTime = this.shift.startTime || this.startTime;
-                    this.endTime = this.shift.endTime || this.endTime;
-                    this.dayOfWeek = this.shift.dayOfWeek || this.dayOfWeek;
-                    this.numberOfShiftsWide = this.shift.numberOfShiftsWide || this.numberOfShiftsWide;
-                    this.shiftPosition = this.shift.shiftPosition || this.shiftPosition;
                     this.pxWidth = this.shift.pxWidth || this.pxWidth;
                     this.pxHeight = this.shift.pxHeight || this.pxHeight;
 
@@ -150,18 +144,21 @@
                 },
                 pxDayHeightChanged: function (oldValue, newValue) {
                     this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
-                    this.style.top = this.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
+                    this.style.top = this.shift.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
                 },
                 domReady: function () {
-                    this.style.width = (100 / DAYS_IN_A_WEEK / this.numberOfShiftsWide) + "%";
-                    this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (this.dayOfWeek - 1) + (this.shiftPosition - 1) * 100 / DAYS_IN_A_WEEK / this.numberOfShiftsWide) + "%";
+                    this.updateStyles();
+                },
+                updateStyles: function() {
+                    this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWide) + "%";
+                    this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (this.shift.dayOfWeek - 1) + (this.shift.position - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWide) + "%";
                     var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
                             pxHeight = parseFloat(getComputedStyle(this).height, 10),
                             width = pxWidth * 5,
                             height = pxHeight * 5,
                             minuteHeight = height / MINUTES_IN_A_DAY;
                     this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
-                    this.style.top = this.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
+                    this.style.top = this.shift.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
                 },
                 mouseOverShift: function(e) {
                     if (this.dragInfo.draggedItem && this.dragInfo.draggedItem.id === "oneEmployee") {

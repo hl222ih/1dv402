@@ -1,7 +1,7 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 
-<polymer-element draggable="false" name="one-employee" attributes="employee dragInfo">
+<polymer-element name="one-employee" attributes="employee dragInfo">
     <template>
         <link rel="stylesheet" href="one-employee.css" type="text/css">
         <!-- to allow nested core-drag-drop elements, added a property object "ongoingDrag" to core-drag-drop element to prevent multiple listeners influencing the singe core-avatar, and change the object's value property to true/false on trackStart vs trackEnd event handlers and only run trackStart function if value is false -->
@@ -21,6 +21,7 @@
                     var dragInfo = event.detail; //has to be event.detail, detail does not work. (core-drag-drop functionality)
                     this.dragInfo = dragInfo; //binding to the rest of the application
 
+                    //style the drag avatar
                     dragInfo.avatar.style.cssText = 'display: block; z-index: 1000; left: -14px; top: -8px; border: 1px solid gray; font-size: 60%; width: 24px; height: 12px; border-radius: 25%; text-align: center;'; //should be done better
                     dragInfo.avatar.style.backgroundColor = this.employee.bgColor;
                     dragInfo.avatar.innerText = this.employee.code;
@@ -29,8 +30,9 @@
                     dragInfo.dropTarget = null;
                     dragInfo.downTarget = dragInfo.event.specialRelatedDownTarget;
 
+                    //needs to be declared, even if empty, due to implementation in core-drag-drop
                     dragInfo.drag = function (dragInfo) {
-                        //to make dropTarget/downTarget/dropSubTarget available in drag (track) event some hooks are added in polymer.js
+                        //to make dropTarget/downTarget available in drag (track) event some hooks are added in polymer.js
 
                         //the polymer element that initialized the drag operation:
                         //added specialRelatedTarget = inEvent.currentTarget to var gestureProto = { ... } in polymer.js
@@ -38,7 +40,7 @@
                         //added specialRelatedDownTarget = t.downTarget to var gestureProto = { ... } in polymer.js
 
                         dragInfo.dropTarget = dragInfo.event.specialRelatedTarget;
-                    }; //seems to be needed to trigger some functionality in core-drag-drop
+                    };
 
                     dragInfo.drop = function (dragInfo) {
                         var dropTarget = dragInfo.event.relatedTarget; //same as dragInfo.dropTarget

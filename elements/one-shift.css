@@ -34,6 +34,10 @@
     box-shadow: white 0 0 3px 2px;
 }
 
+:host(.dragShiftHover) {
+    pointer-events: none !important;
+}
+
 #oneEmployee {
     width: 100%;
 }

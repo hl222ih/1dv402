@@ -2,24 +2,24 @@
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="one-shift.html"/>
 
-<polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout dragInfo">
+<polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout dragInfo" >
     <template>
         <link rel="stylesheet" href="one-week.css" type="text/css">
         <!--test <template bind="{{dragInfo}}">
             -{{draggedType}}-
         </template>-->
-        <div id="weekSchedule" draggable="false">
-            <template repeat="{{weekDay, weekIndex in weekDays}}">
-                <div draggable="false" id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="width: {{pxDayWidth}}px; left: {{weekIndex|pxDayLeftPosition}}px; height: {{pxHeight}}px;">
+        <div id="weekSchedule">
+            <template repeat="{{weekDay, index in weekDays}}">
+                <div id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="width: {{pxDayWidth}}px; left: {{index|pxDayLeftPosition}}px; height: {{pxHeight}}px;">
                     <div class="weekDayHeader">{{weekDay}}</div>
                 </div>
             </template>
             <template repeat="{{shift, index in shifts}}">
                 <!--observe changes in shift.employees by including shift.employees.length in the expression -->
-                <one-shift id="oneShift" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}">{{shift.employees.length}}</one-shift>
+                <one-shift id="oneShift" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
             </template>
         </div>
-        <div id="weekScheduleOverlay" draggable="false"></div>
+        <div id="weekScheduleOverlay"></div>
     </template>
     <script>
         (function() {
@@ -47,13 +47,10 @@
                 mouseOutOfWeekDay: function(e) {
                     e.fromElement.classList.remove('dragShiftHover');
                 },
-                weekDayByIndex: function (index) {
-                    return this.weekDays[index];
-                },
                 weekDays: ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'],
                 weekNumber: 1,
-                pxDayLeftPosition: function (weekDayIndex) {
-                    return this.pxDayWidth * weekDayIndex;
+                pxDayLeftPosition: function (index) {
+                    return this.pxDayWidth * index;
                 },
                 shifts: [],
                 pxWidth: 420,
@@ -62,7 +59,6 @@
                     this.renderSchedule();
                 },
                 pxHeight: 288,
-                strokeWidth: 1,
                 preRenderSchedule: function() {
                     if (this.layout === 1) {
                         if (this.weekNumber === 1) {
@@ -112,14 +108,14 @@
 
                 },
                 renderSchedule: function() {
-                    var strokeWidth = this.strokeWidth;
+                    var strokeWidth = 1;
                     var pxWidth = this.pxWidth + NUMBER_OF_VERTICAL_LINES; //why here and not for this.pxWidth?
                     var pxHeight = this.pxHeight;
                     var width = pxWidth * VIEWBOX_MULTIPLIER;
                     var height = pxHeight * VIEWBOX_MULTIPLIER;
                     var minuteHeight = height / MINUTES_IN_A_DAY;
                     var dayWidth = (width - (VIEWBOX_MULTIPLIER * NUMBER_OF_VERTICAL_LINES))/ DAYS_IN_A_WEEK;
-                    this.pxDayWidth = this.pxWidth /7 + this.strokeWidth;
+                    this.pxDayWidth = this.pxWidth /7 + strokeWidth;
                     var bgDraw;
                     if (this.bgDraw === undefined) {
                         bgDraw = SVG(this.$.weekSchedule).fixSubPixelOffset().size(pxWidth, pxHeight).viewbox(-0.5, -0.5, width, height);

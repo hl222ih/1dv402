@@ -265,13 +265,12 @@
                             endTime: shiftDefinition ? shiftDefinition.endTime : 0,
                             dayOfWeek: shiftData.dayOfWeek,
                             numberOfShiftsWide: Math.floor(Math.random() * 2) + 1, //just for test, better logic later
-                            shiftPosition: 1 //just for test, better logic later
+                            position: 1 //just for test, better logic later
                         };
 
                         //pxWidth: 60 //automatically calculated for now, might be needed?
 
                         //numberOfShiftsWide: 2,
-                        //shiftPosition: 1,
 
                         this.currentSchedule.weekSchedules[i].shifts.push(shift);
                     }
@@ -288,10 +287,18 @@
                     this.$.paperSlider.style.cursor = "none";
                 }
 
-                if (oldValue.event && oldValue.event.type === "trackend") {
+                if (newValue && newValue.event && newValue.event.type === "track") {
+                    if (newValue.draggedItem.id === "oneShift") {
+                        this.disablePointerEventsForOneShifts();
+                    }
+                }
+                if (oldValue && oldValue.event && oldValue.event.type === "trackend") {
                     //if an employee is dropped...
                     if (oldValue.draggedItem.id === "oneEmployee") {
                         this.moveEmployee(oldValue);
+                    } else if (oldValue.draggedItem.id === "oneShift") {
+                        this.enablePointerEventsForOneShifts();
+                        this.moveShift(oldValue);
                     }
                 }
             },
@@ -309,6 +316,21 @@
                             dragInfo.draggedItem.offsetParent.shift.employees.splice(dragInfo.draggedItem.offsetParent.shift.employees.indexOf(dragInfo.draggedItem.employee), 1);
                         }
                     }
+                }
+            },
+            moveShift: function(dragInfo) {
+                //soon
+            },
+            disablePointerEventsForOneShifts: function() {
+                var els = document.querySelectorAll('* /deep/ #oneShift')
+                for (var i = 0; i < els.length; i++) {
+                    els[i].style.pointerEvents = "none";
+                }
+            },
+            enablePointerEventsForOneShifts: function() {
+                var els = document.querySelectorAll('* /deep/ #oneShift')
+                for (var i = 0; i < els.length; i++) {
+                    els[i].style.pointerEvents = "auto";
                 }
             }
         });
