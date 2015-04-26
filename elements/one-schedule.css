@@ -92,3 +92,7 @@ paper-button {
     border: 1px solid gray;
     margin: 0;
 }
+
+* {
+    -webkit-user-select: none; /* make default to not be able to select text anywhere to avoid annoying highlighting */
+}

@@ -2,7 +2,7 @@
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="one-shift.html"/>
 
-<polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout dragInfo"  on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd">
+<polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout dragInfo">
     <template>
         <link rel="stylesheet" href="one-week.css" type="text/css">
         <!--test <template bind="{{dragInfo}}">
@@ -38,11 +38,9 @@
                     }
                     return bgColor;
                 },
-                activeOver: {},
                 dragInfo: {},
                 mouseOverWeekDay: function(e) {
-                    this.activeOver = e.currentTarget;
-                    if (this.dragInfo.draggedType === "shift") {
+                    if (this.dragInfo.draggedItem && this.dragInfo.draggedItem.id === "oneShift") {
                         e.currentTarget.classList.add('dragShiftHover');
                     }
                 },
@@ -189,13 +187,6 @@
                 domReady: function() {
                     this.preRenderSchedule();
                     this.renderSchedule();
-                },
-                shiftDragStart: function(event, detail, sender) {
-                    this.fire('shiftdragstartinweek');
-                },
-                shiftDragEnd: function(event, detail, sender) {
-                    this.fire('shiftdragendinweek');
-
                 }
             });
         })();

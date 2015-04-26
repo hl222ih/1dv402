@@ -5,7 +5,7 @@
 <link rel="import" href="one-employee.html"/>
 <link rel="import" href="../bower_components/paper-button/paper-button.html"/>
 
-<polymer-element unresolved name="one-schedule" on-shiftdragstart="shiftDragStart" on-shiftdragend="shiftDragEnd" on-shiftdragstartinweek="shiftDragStart" on-shiftdragendinweek="shiftDragEnd">
+<polymer-element unresolved name="one-schedule">
     <template>
         <link rel="stylesheet" href="one-schedule.css" type="text/css">
         <div id="headerContainer">
@@ -278,14 +278,6 @@
                 }, this);
                 //add some more stuff to each shift.
             },
-            shiftDragStart: function() {
-                //this.style.cursor = "none";
-                //this.$.paperSlider.style.cursor = "none";
-            },
-            shiftDragEnd: function() {
-                //this.style.cursor = "default";
-                //this.$.paperSlider.style.cursor = "default";
-            },
             dragInfo: {},
             dragInfoChanged: function(oldValue, newValue) {
                 if (Object.keys(this.dragInfo).length === 0) { //check if this.dragInfo is an empty object (no object is dragged -> cursor should be visible)
@@ -298,7 +290,7 @@
 
                 if (oldValue.event && oldValue.event.type === "trackend") {
                     //if an employee is dropped...
-                    if (oldValue.draggedType === "employee") {
+                    if (oldValue.draggedItem.id === "oneEmployee") {
                         this.moveEmployee(oldValue);
                     }
                 }
@@ -311,9 +303,10 @@
                         //add the "employee" to the "oneShift")
                         dragInfo.dropTarget.shift.employees.push(dragInfo.draggedItem.employee);
                         //if the "employee" was dragged from (another) "oneShift"
-                        if (dragInfo.downTarget.offsetParent.id === "oneShift") {
+
+                        if (dragInfo.draggedItem.offsetParent.id === "oneShift") {
                             //remove the "employee" from that "oneShift"
-                            dragInfo.downTarget.offsetParent.shift.employees.splice(dragInfo.downTarget.offsetParent.shift.employees.indexOf(dragInfo.draggedItem.employee), 1);
+                            dragInfo.draggedItem.offsetParent.shift.employees.splice(dragInfo.draggedItem.offsetParent.shift.employees.indexOf(dragInfo.draggedItem.employee), 1);
                         }
                     }
                 }

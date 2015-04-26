@@ -15,51 +15,43 @@
             Polymer('one-employee', {
                 ready: function() {
                     this.addEventListener('drag-start', this.oneEmployeeDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
-                    this.addEventListener('down', function (event) {
-                        this.target = event._target;
-                    },this);
                 },
                 oneEmployeeDragStart: function(event) {
                     var self = this;
                     var dragInfo = event.detail; //has to be event.detail, detail does not work. (core-drag-drop functionality)
                     this.dragInfo = dragInfo; //binding to the rest of the application
-                    dragInfo.subElement = this.target;
-                    dragInfo.avatar.style.cssText = 'display: block; z-index: 1000; left: -14px; top: -8px; border: 1px solid gray' + '; font-size: 60%; width: 24px; height: 12px; border-radius: 25%; text-align: center;'; //should be done better
-                    if (dragInfo.subElement.id === "oneEmployee") {
-                        dragInfo.avatar.style.backgroundColor = this.employee.bgColor;
-                        dragInfo.avatar.innerText = this.employee.code;
-                        dragInfo.draggedType = "employee";
-                    }
+
+                    dragInfo.avatar.style.cssText = 'display: block; z-index: 1000; left: -14px; top: -8px; border: 1px solid gray; font-size: 60%; width: 24px; height: 12px; border-radius: 25%; text-align: center;'; //should be done better
+                    dragInfo.avatar.style.backgroundColor = this.employee.bgColor;
+                    dragInfo.avatar.innerText = this.employee.code;
 
                     dragInfo.draggedItem = this;
                     dragInfo.dropTarget = null;
-                    self.dragged = true;
+                    dragInfo.downTarget = dragInfo.event.specialRelatedDownTarget;
+
                     dragInfo.drag = function (dragInfo) {
-                        var draggedItem = dragInfo.draggedItem;
+                        //to make dropTarget/downTarget/dropSubTarget available in drag (track) event some hooks are added in polymer.js
+
+                        //the polymer element that initialized the drag operation:
                         //added specialRelatedTarget = inEvent.currentTarget to var gestureProto = { ... } in polymer.js
-                        //added specialRelatedSubTarget = inEvent.target to var gestureProto = { ... } in polymer.js
+                        //element inside the shadowDOM that initialized the drag-operation:
                         //added specialRelatedDownTarget = t.downTarget to var gestureProto = { ... } in polymer.js
-                        //to make dropTarget/downTarget/dropSubTarget available in drag (track) event.
+
                         dragInfo.dropTarget = dragInfo.event.specialRelatedTarget;
-                        dragInfo.dropSubTarget = dragInfo.event.specialRelatedSubTarget; //might be needed
-                        dragInfo.downTarget = dragInfo.event.specialRelatedDownTarget;
-
                     }; //seems to be needed to trigger some functionality in core-drag-drop
-                    dragInfo.drop = function (dragInfo) {
 
-                        var dropTarget = dragInfo.dropTarget; //same as dragInfo.event.specialRelatedTarget on drag-event, and same as dragInfo.event.relatedTarget
+                    dragInfo.drop = function (dragInfo) {
+                        var dropTarget = dragInfo.event.relatedTarget; //same as dragInfo.dropTarget
 
                         if (dropTarget && dropTarget.id === "oneShift") {
                             if (dropTarget.classList) {
                                 dropTarget.classList.remove('dragEmployeeHover');
                             }
                         }
-                        self.dragged = false;
+
                         self.dragInfo = {};
-                        //self.resetStyleForTargetOneShift(dropTarget);
                     };
                 },
-                employeeColors: [],
                 dragInfoChanged: function() {
                     this.style.cursor = Object.keys(this.dragInfo).length === 0 ? "default" : "none";
                 }

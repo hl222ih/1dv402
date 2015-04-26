@@ -36,7 +36,6 @@
                 width: 0,
                 week: null,
                 //repeatWeek: null,
-                dragged: false,
                 workplaceCode: "",
                 shiftCode: "",
                 bgColor: "#eee",
@@ -69,57 +68,35 @@
                     if (!dragInfo.event.currentTarget || dragInfo.event.currentTarget.id !== "oneShift") return;
 
                     this.dragInfo = dragInfo; //binding to the rest of the application
-                    dragInfo.subElement = this.target;
                     dragInfo.avatar.style.cssText = 'z-index: 1000; left: -14px; top: -8px; border: 1px solid gray' + '; width: 24px; height: 12px; border-radius: 25%; text-align: center;'; //should be done better
 
                     dragInfo.avatar.style.backgroundColor = "lightgrey";
                     dragInfo.avatar.innerText = this.shiftCode;
-                    dragInfo.draggedType = "shift";
 
                     dragInfo.avatar.style.fontSize = "60%";
                     dragInfo.draggedItem = this;
                     dragInfo.dropTarget = null;
-                    self.dragged = true;
+                    dragInfo.downTarget = dragInfo.event.specialRelatedDownTarget;
+
                     dragInfo.drag = function (dragInfo) {
-                        var draggedItem = dragInfo.draggedItem;
+                        //to make dropTarget/downTarget available in drag (track) event some hooks are added in polymer.js
+
+                        //the polymer element that initialized the drag operation:
                         //added specialRelatedTarget = inEvent.currentTarget to var gestureProto = { ... } in polymer.js
-                        //to make dropTarget available in drag (track) event.
-                        var dropTarget = dragInfo.event.specialRelatedTarget;
-                        var dropSubTarget = dragInfo.event.specialRelatedSubTarget; //temp test
-                        if (dropTarget !== draggedItem) {
-                            if (dropTarget.id === "oneShift") {
-                                //self.addStyleToTargetOneShift(dropTarget);
-                                dragInfo.dropTarget = dropTarget;
-                            } else if (dropSubTarget.id === "oneWeek") {
-                                //self.addStyleToTargetWeekDay(dropSubTarget);
-                                //dropTarget = dragInfo.dropTarget;
-                            } else {
-                                dropTarget = dragInfo.dropTarget;
-                                //self.resetStyleForTargetOneShift(dropTarget);
-                            }
-                        }
-                        else {
-                            dropTarget = dragInfo.dropTarget;
-                            //self.resetStyleForTargetOneShift(dropTarget);
-                        }
+                        //element inside the shadowDOM that initialized the drag-operation:
+                        //added specialRelatedDownTarget = t.downTarget to var gestureProto = { ... } in polymer.js
+
+                        dragInfo.dropTarget = dragInfo.event.specialRelatedTarget;
                     };
                     dragInfo.drop = function (dragInfo) {
-                        //var dropTarget = dragInfo.event.relatedTarget;
+                        var dropTarget = dragInfo.event.relatedTarget;
 
-
-
-                        var dropTarget = dragInfo.dropTarget;
-                        if (dropTarget != null) {
-                            dropTarget.style.backgroundColor = "red";
-                        }
-                        if (dragInfo.event.relatedTarget && dragInfo.event.relatedTarget.id === "weekDay") {
-                            if (dragInfo.event.relatedTarget.classList) {
-                                dragInfo.event.relatedTarget.classList.remove('dragShiftHover');
+                        if (dropTarget && dropTarget.id === "weekDay") {
+                            if (dropTarget.classList) {
+                                dropTarget.classList.remove('dragShiftHover');
                             }
                         }
-                        self.dragged = false;
                         self.dragInfo = {};
-                        //self.resetStyleForTargetOneShift(dropTarget);
                     };
                 },
                 calcMinutes: function () {
@@ -167,20 +144,13 @@
                     this.pxHeight = this.shift.pxHeight || this.pxHeight;
 
                     this.addEventListener('drag-start', self.oneShiftDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
-                    this.addEventListener('down', function (event) {
-                        this.target = event._target; //needed to distinguish between shift itself or just the employee being dragged
-                    },this)
+                    //this.addEventListener('down', function (event) {
+                    //    this.target = event._target; //element inside shadow-DOM since shadow-DOM uses retargeting to ensure ecapsulation. Working, but not currently used.
+                    //},this);
                 },
                 pxDayHeightChanged: function (oldValue, newValue) {
                     this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
                     this.style.top = this.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
-                },
-                draggedChanged: function (oldValue, newValue) {
-                    if (newValue === true) {
-                        this.fire('shiftdragstart');
-                    } else if (newValue === false) {
-                        this.fire('shiftdragend');
-                    }
                 },
                 domReady: function () {
                     this.style.width = (100 / DAYS_IN_A_WEEK / this.numberOfShiftsWide) + "%";
@@ -194,8 +164,7 @@
                     this.style.top = this.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
                 },
                 mouseOverShift: function(e) {
-                    this.activeOver = e.currentTarget;
-                    if (this.dragInfo.draggedType === "employee") {
+                    if (this.dragInfo.draggedItem && this.dragInfo.draggedItem.id === "oneEmployee") {
                         e.currentTarget.classList.add('dragEmployeeHover');
                     }
                 },

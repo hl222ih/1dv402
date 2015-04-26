@@ -6,31 +6,9 @@
     <script src="bower_components/webcomponentsjs/webcomponents.js"></script>
     <link rel="import" href="elements/one-schedule.html"/>
     <title>Schedule</title>
-    <style>
-        @media print {
-            html, body {
-                display: block;
-                width: 100%;
-                height: 100%;
-                position: relative;
-            }
-            one-schedule {
-                display: block;
-                width: 100%;
-                height: 100%;
-                position: relative;
-            }
-        }
-        [unresolved] {
-            opacity: 0;
-        }
-    </style>
+    <link rel="stylesheet" href="styles/styles.css">
 </head>
 <body>
     <one-schedule unresolved></one-schedule>
-    <script src="scripts/app.js"></script>
-    <script>
-        window.onload = function () {};
-    </script>
 </body>
 </html>
