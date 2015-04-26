@@ -3,7 +3,7 @@
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
 
-<polymer-element draggable="false" name="one-shift" attributes="shift pxDayHeight dragInfo" on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
+<polymer-element draggable="false" name="one-shift" attributes="shift pxDayHeight dragInfo"  on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
 
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
@@ -18,13 +18,10 @@
         -->
         <div id="shiftCode" draggable="false">{{shiftCode}}</div>
         <div id="workplaceCode">{{workplaceCode}}</div>
-        <!--<template repeat="{{employeeCode in employeeCodes}}">
-            <div id="employeeCode" style="border: 1px solid black; z-index: 1; box-sizing: border-box;">{{employeeCode}}</div>
-        </template>-->
         <template repeat="{{employee in shift.employees}}">
-            <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}}; width: 100%;"></one-employee>
+            <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
         </template>
-        <div id="displayTime">{{startTime|minutesToHHMMString }}-{{endTime|minutesToHHMMString}}</div>
+        <div id="displayTime">{{startTime|minutesToHHMMString}}-{{endTime|minutesToHHMMString}}</div>
     </template>
     <script>
         (function() {
@@ -33,12 +30,14 @@
             var MINUTES_IN_AN_HOUR = 60;
 
             Polymer('one-shift', {
+                observe: {
+                    'shift.employees' : 'domReady' //todo: better/more logic code
+                },
                 width: 0,
                 week: null,
                 //repeatWeek: null,
                 dragged: false,
                 workplaceCode: "",
-                //employeeCodes: [], property cannot be set to the prototype
                 shiftCode: "",
                 bgColor: "#eee",
                 color: "#000",
@@ -67,7 +66,7 @@
                 oneShiftDragStart: function (event, detail, sender) {
                     var self = this;
                     var dragInfo = event.detail; //has to be event.detail, detail does not work. (core-drag-drop functionality)
-                    if (!dragInfo.event.currentTarget || dragInfo.event.specialRelatedTarget.id !== "oneShift") return;
+                    if (!dragInfo.event.currentTarget || dragInfo.event.currentTarget.id !== "oneShift") return;
 
                     this.dragInfo = dragInfo; //binding to the rest of the application
                     dragInfo.subElement = this.target;
@@ -89,23 +88,26 @@
                         var dropSubTarget = dragInfo.event.specialRelatedSubTarget; //temp test
                         if (dropTarget !== draggedItem) {
                             if (dropTarget.id === "oneShift") {
-                                self.addStyleToTargetOneShift(dropTarget);
+                                //self.addStyleToTargetOneShift(dropTarget);
                                 dragInfo.dropTarget = dropTarget;
                             } else if (dropSubTarget.id === "oneWeek") {
-                                self.addStyleToTargetWeekDay(dropSubTarget);
+                                //self.addStyleToTargetWeekDay(dropSubTarget);
                                 //dropTarget = dragInfo.dropTarget;
                             } else {
                                 dropTarget = dragInfo.dropTarget;
-                                self.resetStyleForTargetOneShift(dropTarget);
+                                //self.resetStyleForTargetOneShift(dropTarget);
                             }
                         }
                         else {
                             dropTarget = dragInfo.dropTarget;
-                            self.resetStyleForTargetOneShift(dropTarget);
+                            //self.resetStyleForTargetOneShift(dropTarget);
                         }
                     };
                     dragInfo.drop = function (dragInfo) {
                         //var dropTarget = dragInfo.event.relatedTarget;
+
+
+
                         var dropTarget = dragInfo.dropTarget;
                         if (dropTarget != null) {
                             dropTarget.style.backgroundColor = "red";
@@ -117,7 +119,7 @@
                         }
                         self.dragged = false;
                         self.dragInfo = {};
-                        self.resetStyleForTargetOneShift(dropTarget);
+                        //self.resetStyleForTargetOneShift(dropTarget);
                     };
                 },
                 calcMinutes: function () {
@@ -148,18 +150,14 @@
                     return minutesToHHMMString(this.endTime);
                 },
                 created: function() {
+
                 },
                 ready: function () {
                     var self = this;
                     //todo: check that all needed data exist or something
                     this.workplaceCode = this.shift.workplace.code || this.workplaceCode;
-                    if (this.shift.employee.code) {
-                        this.employeeCodes = this.employeeCodes ? this.employeeCodes : [];
-                        this.employeeCodes.push(this.shift.employee.code);
-                    }
                     this.shiftCode = this.shift.code || this.shiftCode;
-                    this.bgColor = this.shift.employee.bgColor || this.bgColor;
-                    this.color = this.shift.employee.color || this.color;
+
                     this.startTime = this.shift.startTime || this.startTime;
                     this.endTime = this.shift.endTime || this.endTime;
                     this.dayOfWeek = this.shift.dayOfWeek || this.dayOfWeek;
@@ -192,27 +190,8 @@
                             width = pxWidth * 5,
                             height = pxHeight * 5,
                             minuteHeight = height / MINUTES_IN_A_DAY;
-                },
-                addStyleToTargetOneShift: function (targetOneShift) {
-                    if (targetOneShift != null && ("style" in targetOneShift)) {
-                        targetOneShift.style.border = "3px solid lightgreen";
-                        targetOneShift.style.transform = "translate(-3px, -3px)";
-                        targetOneShift.style.zIndex = "1";
-                    }
-                },
-                resetStyleForTargetOneShift: function (targetOneShift) {
-                    if (targetOneShift != null && ("style" in targetOneShift)) {
-                        targetOneShift.style.border = null;
-                        targetOneShift.style.transform = null;
-                        targetOneShift.style.zIndex = null;
-                    }
-                },
-                addStyleToTargetWeekDay: function (targetWeekDay) {
-                    if (targetWeekDay != null && ("style" in targetWeekDay)) {
-                        targetWeekDay.style.border = "3px solid lightgreen";
-                        targetWeekDay.style.transform = "translate(-3px, -3px)";
-                        targetWeekDay.style.zIndex = "1";
-                    }
+                    this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
+                    this.style.top = this.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
                 },
                 mouseOverShift: function(e) {
                     this.activeOver = e.currentTarget;

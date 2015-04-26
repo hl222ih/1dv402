@@ -55,7 +55,7 @@ paper-button {
     display: block;
     width: 30%;
     height: 90%;
-    border: 1px solid salmon;
+    border: 1px solid rgba(200,50,50,0.3);
 }
 
 #scheduleSelectContainer {
@@ -64,6 +64,7 @@ paper-button {
     left: 0;
     width: 23%;
     height: 100%;
+    padding-left: 3px;
 }
 
 #employeeSelectContainer {
@@ -80,4 +81,14 @@ paper-button {
     left: 55%;
     width: 45%;
     height: 100%;
+    padding-left: 3px;
+}
+
+#shiftSelectContainer div {
+    display: inline-block;
+    width: 25%;
+    background-color: lightgray;
+    font-size: 10px;
+    border: 1px solid gray;
+    margin: 0;
 }

@@ -10,10 +10,13 @@
         </template>-->
         <div id="weekSchedule" draggable="false">
             <template repeat="{{weekDay, weekIndex in weekDays}}">
-                <div draggable="false" id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="width: {{pxDayWidth}}px; left: {{weekIndex|pxDayLeftPosition}}px; height: {{pxHeight}}px;"></div>
+                <div draggable="false" id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="width: {{pxDayWidth}}px; left: {{weekIndex|pxDayLeftPosition}}px; height: {{pxHeight}}px;">
+                    <div class="weekDayHeader">{{weekDay}}</div>
+                </div>
             </template>
             <template repeat="{{shift, index in shifts}}">
-                <one-shift id="oneShift" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{shift|bgColorFromShift}}"></one-shift>
+                <!--observe changes in shift.employees by including shift.employees.length in the expression -->
+                <one-shift id="oneShift" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}">{{shift.employees.length}}</one-shift>
             </template>
         </div>
         <div id="weekScheduleOverlay" draggable="false"></div>
@@ -29,11 +32,11 @@
 
             Polymer('one-week', {
                 bgColorFromShift: function(shift) {
-                    var colorCode = "#eee";
-                    if (shift.employees.length === 1) {
-                        colorCode = this.shift.employees[0].bgColor;
+                    var bgColor = "#eee";
+                    if (shift.employees && shift.employees.length === 1) {
+                        bgColor = shift.employees[0].bgColor;
                     }
-                    return colorCode;
+                    return bgColor;
                 },
                 activeOver: {},
                 dragInfo: {},

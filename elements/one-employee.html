@@ -37,35 +37,21 @@
                     dragInfo.drag = function (dragInfo) {
                         var draggedItem = dragInfo.draggedItem;
                         //added specialRelatedTarget = inEvent.currentTarget to var gestureProto = { ... } in polymer.js
-                        //to make dropTarget available in drag (track) event.
-                        var dropTarget = dragInfo.event.specialRelatedTarget;
-                        var dropSubTarget = dragInfo.event.specialRelatedSubTarget; //temp test
-                        if (dropTarget !== draggedItem) {
-                            if (dropTarget.id === "oneShift") {
-                                //self.addStyleToTargetOneShift(dropTarget);
-                                dragInfo.dropTarget = dropTarget;
-                            } else if (dropSubTarget.id === "oneWeek") {
-                                //self.addStyleToTargetWeekDay(dropSubTarget);
-                                //dropTarget = dragInfo.dropTarget;
-                            } else {
-                                dropTarget = dragInfo.dropTarget;
-                                //self.resetStyleForTargetOneShift(dropTarget);
-                            }
-                        }
-                        else {
-                            dropTarget = dragInfo.dropTarget;
-                            //self.resetStyleForTargetOneShift(dropTarget);
-                        }
+                        //added specialRelatedSubTarget = inEvent.target to var gestureProto = { ... } in polymer.js
+                        //added specialRelatedDownTarget = t.downTarget to var gestureProto = { ... } in polymer.js
+                        //to make dropTarget/downTarget/dropSubTarget available in drag (track) event.
+                        dragInfo.dropTarget = dragInfo.event.specialRelatedTarget;
+                        dragInfo.dropSubTarget = dragInfo.event.specialRelatedSubTarget; //might be needed
+                        dragInfo.downTarget = dragInfo.event.specialRelatedDownTarget;
+
                     }; //seems to be needed to trigger some functionality in core-drag-drop
                     dragInfo.drop = function (dragInfo) {
-                        //var dropTarget = dragInfo.event.relatedTarget;
-                        var dropTarget = dragInfo.dropTarget;
-                        if (dropTarget != null) {
-                            dropTarget.style.backgroundColor = "red";
-                        }
-                        if (dragInfo.event.relatedTarget && dragInfo.event.relatedTarget.id === "oneShift") {
-                            if (dragInfo.event.relatedTarget.classList) {
-                                dragInfo.event.relatedTarget.classList.remove('dragEmployeeHover');
+
+                        var dropTarget = dragInfo.dropTarget; //same as dragInfo.event.specialRelatedTarget on drag-event, and same as dragInfo.event.relatedTarget
+
+                        if (dropTarget && dropTarget.id === "oneShift") {
+                            if (dropTarget.classList) {
+                                dropTarget.classList.remove('dragEmployeeHover');
                             }
                         }
                         self.dragged = false;

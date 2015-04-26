@@ -17,12 +17,20 @@
                 </template>
             </div>
             <div id="shiftSelectContainer" class="selectContainer">
+                <!--some temp data-->
+                <div>A1: 07:00-16:00</div>
+                <div>A2: 07:00-15:00</div>
+                <div>B1: 09:00-16:00</div>
+                <div>B2: 09:00-15:00</div>
+                <div>C1: 16:00-21:00</div>
+                <div>C2: 16:30-21:30</div>
+                <div>R1: 12:00-16:00</div>
             </div>
         </div>
         <div id="scheduleContainer">
             <paper-slider id="paperSlider" min="300" max="900" value="[[pxWeekWidth]]" immediateValue="{{pxWeekWidth}}"></paper-slider>
             <template repeat="{{weekSchedule, index in currentSchedule.weekSchedules}}">
-                <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 288 / 420 / 1.66}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
+                <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 288 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
             </template>
         </div>
     </template>
@@ -54,7 +62,7 @@
                         },
                         {
                             code: "C1",
-                            startTime: 930,
+                            startTime: 630,
                             endTime: 1260
                         }
                     ],
@@ -74,8 +82,15 @@
                             workplaceCode: "WP2",
                             weeks: [1,2],
                             dayOfWeek: 4
+                        },
+                        {
+                            employeeCode: "AA",
+                            employeeCodes: [],
+                            shiftCode: "A1",
+                            workplaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 5
                         }
-
                     ]
                 },
                 {
@@ -249,8 +264,8 @@
                             startTime: shiftDefinition ? shiftDefinition.startTime : 0,
                             endTime: shiftDefinition ? shiftDefinition.endTime : 0,
                             dayOfWeek: shiftData.dayOfWeek,
-                            numberOfShiftsWide: 3,
-                            shiftPosition: 2
+                            numberOfShiftsWide: Math.floor(Math.random() * 2) + 1, //just for test, better logic later
+                            shiftPosition: 1 //just for test, better logic later
                         };
 
                         //pxWidth: 60 //automatically calculated for now, might be needed?
@@ -272,13 +287,35 @@
                 //this.$.paperSlider.style.cursor = "default";
             },
             dragInfo: {},
-            dragInfoChanged: function() {
+            dragInfoChanged: function(oldValue, newValue) {
                 if (Object.keys(this.dragInfo).length === 0) { //check if this.dragInfo is an empty object (no object is dragged -> cursor should be visible)
                     this.style.cursor = "default";
                     this.$.paperSlider.style.cursor = "default";
                 } else {
                     this.style.cursor = "none";
                     this.$.paperSlider.style.cursor = "none";
+                }
+
+                if (oldValue.event && oldValue.event.type === "trackend") {
+                    //if an employee is dropped...
+                    if (oldValue.draggedType === "employee") {
+                        this.moveEmployee(oldValue);
+                    }
+                }
+            },
+            moveEmployee: function(dragInfo) {
+                //if the target is a "oneShift"...
+                if (dragInfo.dropTarget && dragInfo.dropTarget.id === "oneShift") {
+                    //if this "oneShift" does not already have the "employee"
+                    if (dragInfo.dropTarget.shift.employees.indexOf(dragInfo.draggedItem.employee) === -1) {
+                        //add the "employee" to the "oneShift")
+                        dragInfo.dropTarget.shift.employees.push(dragInfo.draggedItem.employee);
+                        //if the "employee" was dragged from (another) "oneShift"
+                        if (dragInfo.downTarget.offsetParent.id === "oneShift") {
+                            //remove the "employee" from that "oneShift"
+                            dragInfo.downTarget.offsetParent.shift.employees.splice(dragInfo.downTarget.offsetParent.shift.employees.indexOf(dragInfo.draggedItem.employee), 1);
+                        }
+                    }
                 }
             }
         });

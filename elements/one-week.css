@@ -31,3 +31,13 @@ div#weekDay {
     background-color: #87ceeb;
     /* dynamically: width, height, left */
 }
+
+.weekDayHeader {
+    position: absolute;
+    top: 0;
+    text-align: center;
+    left: 0;
+    right: 0;
+    background-color: rgba(255,255,255,0.25);
+    color: rgba(0,0,0,0.5);
+}
