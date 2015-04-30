@@ -3,7 +3,7 @@
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
 
-<polymer-element name="one-shift" attributes="shift pxDayHeight dragInfo"  on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
+<polymer-element name="one-shift" attributes="shift part pxDayHeight dragInfo"  on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
 
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
@@ -119,8 +119,8 @@
                         startTime = this.shift.startTime,
                         endTime = this.shift.endTime;
 
-                    if (startTime >= endTime)
-                        minutes = startTime;
+                    if (startTime > endTime)
+                        minutes = endTime;
 
                     return minutes;
                 },
@@ -143,31 +143,63 @@
                     //},this);
                 },
                 pxDayHeightChanged: function (oldValue, newValue) {
-                    this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
-                    this.style.top = this.shift.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
+                    this.setShiftTopHeightValues();
+                },
+                setShiftTopHeightValues: function() {
+                    if (this.part === "first") {
+                        this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
+                        this.style.top = this.shift.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
+                    } else if (this.part === "second") {
+                        this.style.height = this.calcMinutesOfNextDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
+                        this.style.top = "0";
+                    }
                 },
                 domReady: function () {
                     this.updateStyles();
+                    if (this.listOfInstances.indexOf(this) === -1) {
+                        this.listOfInstances.push(this);
+                    }
                 },
                 updateStyles: function() {
-                    this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWide) + "%";
-                    this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (this.shift.dayOfWeek - 1) + (this.shift.position - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWide) + "%";
+                    if (this.part === "first") {
+                        this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%"; //todo: fix
+                        this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (this.shift.dayOfWeek - 1) + (this.shift.positionForFirst - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%";
+                    } else if (this.part === "second") {
+                        this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForSecond) + "%"; //todo: fix
+                        var dayOfWeek = this.shift.dayOfWeek <= 6 ? this.shift.dayOfWeek + 1 : 1;
+                        this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (dayOfWeek - 1) + (this.shift.positionForSecond - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForSecond) + "%";
+                    }
                     var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
                             pxHeight = parseFloat(getComputedStyle(this).height, 10),
                             width = pxWidth * 5,
                             height = pxHeight * 5,
                             minuteHeight = height / MINUTES_IN_A_DAY;
-                    this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
-                    this.style.top = this.shift.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
+                    this.setShiftTopHeightValues();
+
+                    //this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
+                    //this.style.top = this.shift.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
                 },
                 mouseOverShift: function(e) {
+                    var self = this;
                     if (this.dragInfo.draggedItem && this.dragInfo.draggedItem.id === "oneEmployee") {
-                        e.currentTarget.classList.add('dragEmployeeHover');
+                        var list = this.listOfInstances.filter( function(instance) {
+                            return instance.shift === self.shift;
+                        });
+                        for (var i = 0; i < list.length; i++) {
+                            list[i].classList.add('dragEmployeeHover');
+                        }
                     }
                 },
                 mouseOutOfShift: function(e) {
-                    e.fromElement.classList.remove('dragEmployeeHover');
-                }
+                    var self = this;
+                    var list = this.listOfInstances.filter( function(instance) {
+                        return instance.shift === self.shift;
+                    });
+                    for (var i = 0; i < list.length; i++) {
+                        list[i].classList.remove('dragEmployeeHover');
+                    }
+                },
+                listOfInstances: []
             });
         })();
     </script>

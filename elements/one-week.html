@@ -5,9 +5,6 @@
 <polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout dragInfo" >
     <template>
         <link rel="stylesheet" href="one-week.css" type="text/css">
-        <!--test <template bind="{{dragInfo}}">
-            -{{draggedType}}-
-        </template>-->
         <div id="weekSchedule">
             <template repeat="{{weekDay, index in weekDays}}">
                 <div id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="width: {{pxDayWidth}}px; left: {{index|pxDayLeftPosition}}px; height: {{pxHeight}}px;">
@@ -15,8 +12,18 @@
                 </div>
             </template>
             <template repeat="{{shift, index in shifts}}">
-                <!--observe changes in shift.employees by including shift.employees.length in the expression -->
-                <one-shift id="oneShift" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
+                <!--night shifts are divided into two html-elements (who share shift object)-->
+                <template if="{{shift|shouldDisplayFirstElement}}">
+                    <!--observe changes in shift.employees by including shift.employees.length in the expression -->
+                    <one-shift id="oneShift" part="first" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
+                    <template if="{{shift|shouldDisplaySecondElementToo}}">
+                        <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
+                    </template>
+                </template>
+                <template if="{{shift|shouldDisplaySecondElementOnly}}">
+                    <!--observe changes in shift.employees by including shift.employees.length in the expression -->
+                    <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
+                </template>
             </template>
         </div>
         <div id="weekScheduleOverlay"></div>
@@ -31,6 +38,29 @@
             var VIEWBOX_MULTIPLIER = 5;
 
             Polymer('one-week', {
+                shouldDisplayFirstElement: function(shift) {
+                    //shift that span over midnight (night shifts) need to display two different elements based on the same shift model object.
+                    //day shifts only needs one element.
+
+                    //return true if oneWeek's weekNumber correspond to the week number given in the shift.
+                    return this.weekNumber === shift.week;
+                },
+                shouldDisplaySecondElementToo: function(shift) {
+                    //return true if...
+                    //...shift is a night shift
+                    return shift.startTime > shift.endTime &&
+                        //...and oneWeek's weekNumber correspond to the week number given in the shift
+                        this.weekNumber === shift.week &&
+                        //...unless the day of week is 7 (then the second part of the shift belongs to another week)
+                        shift.dayOfWeek !== 7;
+                },
+                shouldDisplaySecondElementOnly: function(shift) {
+                    //return true if...
+                    //...shift is a night shift
+                    return shift.startTime > shift.endTime &&
+                        //...and oneWeek's weekNumber doesn't correspond to the week number given in the shift (indicating the first part of the shift was a Sunday of another week)
+                        this.weekNumber !== shift.week;
+                },
                 bgColorFromShift: function(shift) {
                     var bgColor = "#eee";
                     if (shift.employees && shift.employees.length === 1) {

@@ -47,7 +47,12 @@
 
                         if (dropTarget && dropTarget.id === "oneShift") {
                             if (dropTarget.classList) {
-                                dropTarget.classList.remove('dragEmployeeHover');
+                                var list = dropTarget.listOfInstances.filter( function(instance) {
+                                    return instance.shift === dropTarget.shift;
+                                });
+                                for (var i = 0; i < list.length; i++) {
+                                    list[i].classList.remove('dragEmployeeHover');
+                                }
                             }
                         }
 

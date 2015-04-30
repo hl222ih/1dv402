@@ -22,7 +22,7 @@
                 <div>A2: 07:00-15:00</div>
                 <div>B1: 09:00-16:00</div>
                 <div>B2: 09:00-15:00</div>
-                <div>C1: 16:00-21:00</div>
+                <div>C1: 16:00-21:15</div>
                 <div>C2: 16:30-21:30</div>
                 <div>R1: 12:00-16:00</div>
             </div>
@@ -36,6 +36,8 @@
     </template>
     <script src="../bower_components/svg.js/dist/svg.js"></script>
     <script>
+        var NUMBER_OF_MINUTES_IN_A_DAY = 1440;
+
         Polymer('one-schedule', {
             pxWeekWidth: 420,
             currentSchedule: {
@@ -51,7 +53,7 @@
                     employeeCodes: ["AA", "BB", "CC", "DD", "EE", "FF", "GG", "HH", "II", "JJ", "KK", "LL", "MM", "NN", "OO", "PP"],
                     shiftDefinitions: [
                         {
-                            code: "A1",
+                            code: "A1", //07:00-16:00
                             startTime: 420,
                             endTime: 960
                         },
@@ -61,9 +63,19 @@
                             endTime: 930
                         },
                         {
-                            code: "C1",
+                            code: "C1", //10:30-21:15
                             startTime: 630,
-                            endTime: 1260
+                            endTime: 1275
+                        },
+                        {
+                            code: "N", //21:00-07:15
+                            startTime: 1260,
+                            endTime: 435
+                        },
+                        {
+                            code: "Q1", //06:00-09:20
+                            startTime: 360,
+                            endTime: 560
                         }
                     ],
                     shifts: [
@@ -73,7 +85,7 @@
                             shiftCode: "A1",
                             workplaceCode: "WP1",
                             weeks: [1],
-                            dayOfWeek: 3
+                            dayOfWeek: 1
                         },
                         {
                             employeeCode: "BB",
@@ -81,7 +93,7 @@
                             shiftCode: "C1",
                             workplaceCode: "WP2",
                             weeks: [1,2],
-                            dayOfWeek: 4
+                            dayOfWeek: 1
                         },
                         {
                             employeeCode: "AA",
@@ -90,6 +102,27 @@
                             workplaceCode: "WP1",
                             weeks: [1],
                             dayOfWeek: 5
+                        },
+                        {
+                            employeeCodes: ["DD"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [2],
+                            dayOfWeek: 4
+                        },
+                        {
+                            employeeCodes: ["DD"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [4],
+                            dayOfWeek: 7
+                        },
+                        {
+                            employeeCodes: ["PP"],
+                            shiftCode: "Q1",
+                            workPlaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 1
                         }
                     ]
                 },
@@ -237,7 +270,7 @@
                 if (scheduleData === null) return;
 
                 this.currentSchedule.shiftDefinitions = scheduleData.shiftDefinitions;
-
+                this.currentSchedule.numberOfWeeks = scheduleData.numberOfWeeks;
                 this.currentSchedule.employees = this.employeesFromCodes(scheduleData.employeeCodes);
 
                 this.currentSchedule.name = scheduleData.name;
@@ -264,18 +297,337 @@
                             startTime: shiftDefinition ? shiftDefinition.startTime : 0,
                             endTime: shiftDefinition ? shiftDefinition.endTime : 0,
                             dayOfWeek: shiftData.dayOfWeek,
-                            numberOfShiftsWide: Math.floor(Math.random() * 2) + 1, //just for test, better logic later
-                            position: 1 //just for test, better logic later
+                            numberOfShiftsWideForFirst: 1,
+                            numberOfShiftsWideForSecond: 1,
+                            positionForFirst: 1,
+                            positionForSecond: 1
                         };
 
                         //pxWidth: 60 //automatically calculated for now, might be needed?
 
                         //numberOfShiftsWide: 2,
 
-                        this.currentSchedule.weekSchedules[i].shifts.push(shift);
+                        this.currentSchedule.weekSchedules[shift.week - 1].shifts.push(shift);
+                        if (shift.endTime < shift.startTime) {
+                            if (shift.dayOfWeek === 7) {
+                                if (shift.week !== this.currentSchedule.numberOfWeeks) {
+                                    this.currentSchedule.weekSchedules[shift.week].shifts.push(shift);
+                                } else {
+                                    this.currentSchedule.weekSchedules[0].shifts.push(shift);
+                                }
+                            }
+                        }
+
                     }
                 }, this);
-                //add some more stuff to each shift.
+
+                var getAdjustedStartTime = function (shift, dayOfWeek) {
+                    var startTime;
+
+                    if (shift.startTime < shift.endTime) {
+                        //shift within same day
+                        startTime = shift.startTime;
+                    } else {
+                        //shift spans over two days
+                        if (shift.dayOfWeek === dayOfWeek) {
+                            //use first part of shift (i.e. [22:00]-00:00)
+                            startTime = shift.startTime;
+                        } else {
+                            //use second part of shift (i.e. [00:00]-06:00)
+                            startTime = 0;
+                        }
+                    }
+
+                    return startTime;
+                };
+
+                var getAdjustedEndTime = function (shift, dayOfWeek) {
+                    var endTime;
+
+                    if (shift.startTime < shift.endTime) {
+                        //shift within same day
+                        endTime = shift.endTime;
+                    } else {
+                        //shift spans over two days
+                        if (shift.dayOfWeek === dayOfWeek) {
+                            //use first time of shift (i.e. 22:00-[00:00])
+                            endTime = NUMBER_OF_MINUTES_IN_A_DAY;
+                        } else {
+                            //use second time of shift (i.e. 00:00-[06:00])
+                            endTime = shift.endTime;
+                        }
+                    }
+
+                    return endTime;
+                };
+
+                var isFirstOrSecondEvaluated = function (shift, dayOfWeek) {
+                    var result;
+
+                    if (shift.startTime < shift.endTime) {
+                        result = "first";
+                    } else {
+                        if (shift.dayOfWeek === dayOfWeek) {
+                            result = "first";
+                        } else {
+                            result = "second";
+                        }
+                    }
+
+                    return result;
+                };
+
+                for (var currentWeekIndex = 0; currentWeekIndex < this.currentSchedule.weekSchedules.length; currentWeekIndex++) {
+                    for (var dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
+                        var currentShifts = this.currentSchedule.weekSchedules[currentWeekIndex].shifts.filter( function(shift) {
+                            return ((shift.week === currentWeekIndex + 1 && shift.dayOfWeek === dayOfWeek && isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") ||
+                            (shift.week === currentWeekIndex + 1 && shift.dayOfWeek === dayOfWeek && isFirstOrSecondEvaluated(shift, dayOfWeek) === "second") ||
+                            (shift.week !== currentWeekIndex + 1 && shift.dayOfWeek === 7 && dayOfWeek === 1 && isFirstOrSecondEvaluated(shift, dayOfWeek) === "second"));
+                        });
+
+                        console.log(currentShifts.length);
+                        if (currentShifts.length === 4) {
+                            console.log("weekIndex: " + (currentWeekIndex + 1) + ", week: " +  currentShifts[0].week + ", day: " + currentShifts[0].dayOfWeek + ", times: " + currentShifts[0].startTime + "-" + currentShifts[0].endTime + ".");
+                            console.log("weekIndex: " + (currentWeekIndex + 1) + ", week: " +  currentShifts[1].week + ", day: " + currentShifts[1].dayOfWeek + ", times: " +  currentShifts[1].startTime + "-" + currentShifts[1].endTime + ".");
+                        }
+                        currentShifts = currentShifts.sort(function(a,b) {
+                            // if shift spans over two days, and shift's dayOfWeek is not equal to current day's dayOfWeek, set startTime to 0.
+                            // if shift spans over two days, and shift's dayOfWeek is equal to current day's dayOfWeek, set endTime to 1440.
+                            // sort on 1) startTime, ascending, 2) endTime, ascending
+                            var result = 0;
+                            var aStartTime = getAdjustedStartTime(a, dayOfWeek);
+                            var aEndTime = getAdjustedEndTime(a, dayOfWeek);
+                            var bStartTime = getAdjustedStartTime(b, dayOfWeek);
+                            var bEndTime = getAdjustedEndTime(b, dayOfWeek);
+                            if (aStartTime !== bStartTime) {
+                                result = aStartTime - bStartTime;
+                            } else {
+                                result = aEndTime - bEndTime;
+                            }
+                            return result;
+                        });
+
+                        var tempShifts = [];
+                        for (var p = 0; p < currentShifts.length; p++) {
+                            var currentShift = currentShifts[p];
+
+                            if (tempShifts.length === 0) {
+                                tempShifts.push(currentShift);
+                                continue;
+                            }
+                            var currentStartTime = getAdjustedStartTime(currentShift, dayOfWeek);
+                            var currentEndTime = getAdjustedEndTime(currentShift, dayOfWeek);
+
+                            var setShiftPosition = function(shift, position) {
+                                if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
+                                    shift.positionForFirst = position;
+                                } else {
+                                    shift.positionForSecond = position;
+                                }
+                            };
+                            var getShiftPosition = function(shift) {
+                                if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
+                                    return shift.positionForFirst;
+                                } else {
+                                    return shift.positionForSecond;
+                                }
+                            };
+                            var setShiftWidth = function(shift, width, addToPrevious) {
+                                if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
+                                    if (addToPrevious) {
+                                        shift.numberOfShiftsWideForFirst = shift.numberOfShiftsWideForFirst + width;
+                                    } else {
+                                        shift.numberOfShiftsWideForFirst = width;
+                                    }
+                                } else {
+                                    if (addToPrevious) {
+                                        shift.numberOfShiftsWideForSecond = shift.numberOfShiftsWideForSecond + width;
+                                    } else {
+                                        shift.numberOfShiftsWideForSecond = width;
+                                    }
+                                }
+                            };
+                            var getShiftWidth = function(shift) {
+                                if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
+                                    return shift.numberOfShiftsWideForFirst;
+                                } else {
+                                    return shift.numberOfShiftsWideForSecond;
+                                }
+                            };
+                            var removeTempShifts = [];
+                            for (var s = 0; s < tempShifts.length; s++) {
+                                var otherStartTime = getAdjustedStartTime(tempShifts[s], dayOfWeek);
+                                var otherEndTime = getAdjustedEndTime(tempShifts[s], dayOfWeek);
+
+                                var isColliding =  ((otherStartTime > currentStartTime && otherStartTime < currentEndTime) || (otherEndTime > currentStartTime && otherEndTime < currentEndTime));
+                                if (isColliding) {
+                                    if (removeTempShifts.length > 0) {
+                                        //kanske kontrollera om det går att sätta bredare?
+                                        setShiftWidth(currentShift, getShiftWidth(tempShifts[s]) /1.5, false);
+                                        //kanske kontrollera om rTS[0] finns ens
+                                        setShiftPosition(currentShift, tempShifts[removeTempShifts[0]]);
+
+                                    } else {
+                                        setShiftWidth(tempShifts[s], 1, true);
+                                        setShiftWidth(currentShift, getShiftWidth(tempShifts[s]), false);
+                                        setShiftPosition(currentShift, getShiftPosition(tempShifts[s]) + 1);
+                                    }
+                                } else {
+                                    //setShiftWidth(tempShifts[s], 1, true);
+                                    //setShiftWidth(currentShift, getShiftWidth(tempShifts[s]), false);
+                                    //setShiftPosition(currentShift, getShiftPosition(tempShifts[s]) + 1);
+                                    removeTempShifts.push(s);
+                                }
+                            }
+                            removeTempShifts.forEach( function(s) {
+                                tempShifts.splice(s, 1); //shouldnt work
+                            });
+
+
+                            tempShifts.push(currentShift);
+
+                            /*                            var currentShift = currentShifts[p];
+                                                        //x = hur många andra shifts har startTime < currentShifts[p].endTime eller endTime > currentShifts[p].startTime
+                                                        var currentStartTime = getAdjustedStartTime(currentShift, dayOfWeek);
+                                                        var currentEndTime = getAdjustedEndTime(currentShift, dayOfWeek);
+
+                                                        var widthShifts = currentShifts.filter(function(shift) {
+                                                            var otherStartTime = getAdjustedStartTime(shift, dayOfWeek);
+                                                            var otherEndTime = getAdjustedEndTime(shift, dayOfWeek);
+                                                            // andra passets startTid eller slutTid måste vara större än startTiden för mitt pass + mindre än slutTiden för mitt pass
+                                                            return (((otherStartTime > currentStartTime && otherStartTime < currentEndTime) || (otherEndTime > currentStartTime && otherEndTime < currentEndTime)) && shift !== currentShift);
+                                                        });
+                                                        if (isFirstOrSecondEvaluated(currentShift, dayOfWeek) === "first") {
+                                                            currentShift.numberOfShiftsWideForFirst = 1 + widthShifts.length;
+                                                        } else {
+                                                            currentShift.numberOfShiftsWideForSecond = 1 + widthShifts.length;
+                                                        }
+                                                        currentShift.isAltered = true;
+                                                       // if (p === 0) {
+                                                            for (var s = 0; s < widthShifts.length; s++) {
+                                                                if (widthShifts[s].isAltered !== true) {
+                                                                    if (isFirstOrSecondEvaluated(widthShifts[s], dayOfWeek) === "first") {
+                                                                        widthShifts[s].numberOfShiftsWideForFirst = 1 + widthShifts.length;
+                                                                    } else {
+                                                                        widthShifts[s].numberOfShiftsWideForSecond = 1 + widthShifts.length;
+                                                                    }
+                                                                }
+                                                            }
+
+                                                        //}*/
+
+                            //krockar om:
+                            //startTiden för det andra passet är mindre än slutTiden för mitt pass
+                            //samtidigt som
+                            //slutTiden för det andra passet är mindre än startTiden för mitt pass
+                            //ELLER
+                            //slutTiden för det andra passet är större än startTiden för mitt pass
+                            //samtidigt som
+                            //startTiden för det andra passet är mindre än slutTiden för migg pass
+
+
+                            //
+                            //A
+                            //A
+                            //AM  startTiden för det andra passet är mindre än startTiden för mitt pass
+                            // M  slutTiden för det andra passet är större än startTiden för mitt pass
+                            //
+                            //
+                            //
+                            //A
+                            //A
+                            //AM  samma som ovan
+                            //AM
+                            //A
+                            //
+                            //
+                            // M  startTiden för det andra passet är mindre än slutTiden för mitt pass
+                            //AM  startTiden för det andra passet är större än startTiden för mitt pass
+                            // M
+                            //
+                            // M  startTiden för det andra passet är mindre än slutTiden för mitt pass
+                            //AM  startTiden för det andra passet är större än startTiden för mitt pass
+                            //A
+                            //A
+                            //
+                            // antingen startar det inom intervallet för mitt pass, eller så slutar det inom intervallet
+                            // andra passets startTid eller slutTid måste vara större än startTiden för mitt pass + mindre än slutTiden för mitt pass
+
+/*
+                            var currentShift,
+                                    earlierShift,
+                                    earlierShiftStartTime,
+                                    earlierShiftEndTime,
+                                    currentShiftStartTime,
+                                    currentShiftEndTime;
+
+                            if (p === 1) {
+                                currentShift = currentShifts[p];
+                                earlierShift = currentShifts[p-1];
+                                earlierShiftStartTime = getAdjustedStartTime(earlierShift, dayOfWeek);
+                                earlierShiftEndTime = getAdjustedEndTime(earlierShift, dayOfWeek);
+                                currentShiftStartTime = getAdjustedStartTime(currentShift, dayOfWeek);
+                                currentShiftEndTime = getAdjustedEndTime(currentShift, dayOfWeek);
+                                if (currentShiftStartTime < earlierShiftEndTime) {
+                                    if (isFirstOrSecondEvaluated(earlierShift, dayOfWeek) === "first") {
+                                        earlierShift.numberOfShiftsWideForFirst++;
+                                    } else {
+                                        earlierShift.numberOfShiftsWideForSecond++;
+                                    }
+                                    if (isFirstOrSecondEvaluated(currentShift, dayOfWeek) === "first") {
+                                        currentShift.numberOfShiftsWideForFirst++;
+                                        currentShift.positionForFirst++;
+                                    } else {
+                                        currentShift.numberOfShiftsWideForSecond++;
+                                        currentShift.positionForSecond++;
+                                    }
+                                }
+                            }
+                            if (p === 2) {
+                                currentShift = currentShifts[p];
+                                earlierShift = currentShifts[p-1];
+                                var earlierEarlierShift = currentShifts[p-2];
+                                currentShiftStartTime = getAdjustedStartTime(currentShift, dayOfWeek);
+                                currentShiftEndTime = getAdjustedEndTime(currentShift, dayOfWeek);
+                                earlierShiftStartTime = getAdjustedStartTime(earlierShift, dayOfWeek);
+                                earlierShiftEndTime = getAdjustedEndTime(earlierShift, dayOfWeek);
+                                var earlierEarlierShiftStartTime = getAdjustedStartTime(earlierEarlierShift, dayOfWeek);
+                                var earlierEarlierShiftEndTime = getAdjustedEndTime(earlierEarlierShift, dayOfWeek);
+                                if (currentShiftStartTime < earlierShiftEndTime) {
+                                    if (currentShiftStartTime < earlierEarlierShiftEndTime) {
+                                        //earlier+earlierEarlier 2->3 wide
+                                        if (isFirstOrSecondEvaluated(earlierShift, dayOfWeek) === "first") {
+                                            earlierShift.numberOfShiftsWideForFirst++;
+                                        } else {
+                                            earlierShift.numberOfShiftsWideForSecond++;
+                                        }
+
+                                        if (isFirstOrSecondEvaluated(earlierEarlierShift, dayOfWeek) === "first") {
+                                            earlierEarlierShift.numberOfShiftsWideForFirst++;
+                                        } else {
+                                            earlierEarlierShift.numberOfShiftsWideForSecond++;
+                                        }
+
+                                        if (isFirstOrSecondEvaluated(currentShift, dayOfWeek) === "first") {
+                                            currentShift.numberOfShiftsWideForFirst = currentShift.numberOfShiftsWideForFirst + 2;
+                                            currentShift.positionForFirst = currentShift.positionForFirst + 2;
+                                        } else {
+                                            currentShift.numberOfShiftsWideForSecond = currentShift.numberOfShiftsWideForSecond + 2;
+                                            currentShift.positionForSecond = currentShift.positionForSecond + 2;
+                                        }
+                                    } else {
+                                        if (isFirstOrSecondEvaluated(currentShift, dayOfWeek) === "first") {
+                                            currentShift.numberOfShiftsWideForFirst++;
+                                        } else {
+                                            currentShift.numberOfShiftsWideForSecond++;
+                                        }
+                                    }
+                                }
+                            }
+*/
+                        }
+                    }
+                }
             },
             dragInfo: {},
             dragInfoChanged: function(oldValue, newValue) {
@@ -322,13 +674,13 @@
                 //soon
             },
             disablePointerEventsForOneShifts: function() {
-                var els = document.querySelectorAll('* /deep/ #oneShift')
+                var els = document.querySelectorAll('* /deep/ #oneShift');
                 for (var i = 0; i < els.length; i++) {
                     els[i].style.pointerEvents = "none";
                 }
             },
             enablePointerEventsForOneShifts: function() {
-                var els = document.querySelectorAll('* /deep/ #oneShift')
+                var els = document.querySelectorAll('* /deep/ #oneShift');
                 for (var i = 0; i < els.length; i++) {
                     els[i].style.pointerEvents = "auto";
                 }
