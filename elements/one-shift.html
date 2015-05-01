@@ -3,7 +3,7 @@
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
 
-<polymer-element name="one-shift" attributes="shift part pxDayHeight dragInfo"  on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
+<polymer-element name="one-shift" attributes="shift part pxDayHeight pxDayWidth dragInfo"  on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
 
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
@@ -17,7 +17,7 @@
             otherwise core-drag-drop will only listen to dragging child elements, not the Polymer element itself
         -->
         <div id="shiftCode">{{shift.code}}</div>
-        <div id="workplaceCode">{{shift.workplace.code}}</div>
+        <!--<div id="workplaceCode">{{shift.workplace.code}}</div>-->
         <template repeat="{{employee in shift.employees}}">
             <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
         </template>
@@ -60,8 +60,8 @@
                     this.dragInfo = dragInfo; //update bound dragInfo
 
                     //style the drag avatar
-                    dragInfo.avatar.style.cssText = 'z-index: 1000; left: -14px; top: -8px; border: 1px solid gray' + '; width: 24px; height: 12px; border-radius: 25%; text-align: center;'; //should be done better
-                    dragInfo.avatar.style.backgroundColor = "lightgrey";
+                    dragInfo.avatar.style.cssText = 'z-index: 1000; left: -14px; top: -8px; border: 1px solid gray' + '; width: 24px; height: 12px; border-radius: 25%; text-align: center; box-shadow: 0 1px 0 rgba(255,255,255,.2), inset 0 4px 5px rgba(0,0,0,.2), inset 0 1px 0 rgba(0,0,0,.2); border-radius: 5px;'; //should be done better
+                   dragInfo.avatar.style.backgroundColor = "lightgrey";
                     dragInfo.avatar.innerText = this.shift.code;
                     dragInfo.avatar.style.fontSize = "60%";
 
@@ -131,13 +131,7 @@
                     return minutesToHHMMString(this.shift.endTime);
                 },
                 ready: function () {
-                    var self = this;
-                    //todo: check that all needed data exist or something
-
-                    this.pxWidth = this.shift.pxWidth || this.pxWidth;
-                    this.pxHeight = this.shift.pxHeight || this.pxHeight;
-
-                    this.addEventListener('drag-start', self.oneShiftDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
+                    this.addEventListener('drag-start', this.oneShiftDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
                     //this.addEventListener('down', function (event) {
                     //    this.target = event._target; //element inside shadow-DOM since shadow-DOM uses retargeting to ensure ecapsulation. Working, but not currently used.
                     //},this);
@@ -160,20 +154,30 @@
                         this.listOfInstances.push(this);
                     }
                 },
+                pxDayWidthChanged: function () {
+                    this.listOfInstances.forEach( function (shift) {
+                        shift.updateStyles();
+                    })
+                },
                 updateStyles: function() {
+                    var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
+                        pxHeight = parseFloat(getComputedStyle(this).height, 10),
+                        width = pxWidth * 5,
+                        height = pxHeight * 5,
+                        minuteHeight = height / MINUTES_IN_A_DAY;
+
                     if (this.part === "first") {
                         this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%"; //todo: fix
                         this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (this.shift.dayOfWeek - 1) + (this.shift.positionForFirst - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%";
+                        this.$.displayTime.style.fontSize = (pxWidth / (this.shift.numberOfShiftsWideForFirst === 1 ? 6 : 3)) + "px";
                     } else if (this.part === "second") {
                         this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForSecond) + "%"; //todo: fix
+                        this.$.displayTime.style.fontSize = (pxWidth / (this.shift.numberOfShiftsWideForSecond === 1 ? 6 : 3)) + "px";
+
                         var dayOfWeek = this.shift.dayOfWeek <= 6 ? this.shift.dayOfWeek + 1 : 1;
                         this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (dayOfWeek - 1) + (this.shift.positionForSecond - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForSecond) + "%";
                     }
-                    var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
-                            pxHeight = parseFloat(getComputedStyle(this).height, 10),
-                            width = pxWidth * 5,
-                            height = pxHeight * 5,
-                            minuteHeight = height / MINUTES_IN_A_DAY;
+
                     this.setShiftTopHeightValues();
 
                     //this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';

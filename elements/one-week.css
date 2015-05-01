@@ -14,11 +14,27 @@ svg {
 
 #weekSchedule {
     position: absolute;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    overflow: hidden;
 }
 
 #weekScheduleOverlay {
     position: absolute;
+    overflow: hidden;
     pointer-events: none;
+
+    -webkit-filter:blur(0); /*needed for the blur on box-shadow*/
+
+    -webkit-box-shadow: 0 1px 0 rgba(255,255,255,.2), inset 0 4px 5px rgba(0,0,0,.2), inset 0 1px 0 rgba(0,0,0,.2);
+    -moz-box-shadow: 0 1px 0 rgba(255,255,255,.2), inset 0 4px 5px rgba(0,0,0,.2), inset 0 1px 0 rgba(0,0,0,.2);
+    box-shadow: 0 1px 0 rgba(255,255,255,.2), inset 0 4px 5px rgba(0,0,0,.2), inset 0 1px 0 rgba(0,0,0,.2);
+
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+
 }
 
 div#weekDay.dragShiftHover {

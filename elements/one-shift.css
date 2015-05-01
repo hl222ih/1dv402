@@ -3,12 +3,30 @@
     position: absolute;
     height: 100%;
     font-size: 9px;
-    font-family: "Verdana", sans-serif;
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
     /* dynamic background-color, height, top */
     /* dynamic width, left (?)*/
+    border-radius: 5px;
 }
 
-#shiftCode, #workplaceCode, #employeeCode {
+
+@media screen {
+    :host {
+        -webkit-filter: blur(0); /*needed for the blur on box-shadow*/
+        box-shadow: 0 1px 0 rgba(255, 255, 255, .2), inset 0 4px 5px rgba(0, 0, 0, .2), inset 0 1px 0 rgba(0, 0, 0, .2);
+        background-color: #ffffed;
+    }
+}
+
+@media print {
+    :host {
+        border: 1px solid rgba(0,0,0,0.7);
+        box-sizing: border-box;
+        background-color: inherit;
+    }
+}
+
+#shiftCode, #workplaceCode, #displayTime {
     text-align: center;
 }
 
@@ -31,6 +49,7 @@
     /*transform: translate(-1px, -1px); //needed with border*/
     pointer-events: auto !important;
     opacity: 0.9;
+    -webkit-filter:blur(0); /*needed for the blur on box-shadow*/
     box-shadow: white 0 0 3px 2px;
 }
 

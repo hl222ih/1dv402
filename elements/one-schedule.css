@@ -1,26 +1,50 @@
+
 :host {
     opacity: 1;
     transition: opacity 500ms ease-in-out;
     display: block;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
+    margin: 0;
+    padding: 0;
 }
 
 #headerContainer {
     display: block;
     position: relative;
     height: 10%;
-    width: 90%;
-    background-color: #ffffed;
-    margin-bottom: 2%;
+    width: 100%;
+    border-radius: 5px;
+    margin: 1%;
 }
+
 #scheduleContainer {
     display: block;
     position: relative;
     height: 80%;
-    width: 90%;
-    background-color: #ffffed;
+    width: 100%;
     overflow: auto;
+    border-radius: 5px;
+}
+
+#infoContainer {
+    border-radius: 5px;
+    margin: 1%;
+}
+
+@media screen {
+    #infoContainer, #scheduleContainer, #headerContainer {
+        -webkit-filter: blur(0); /*needed for the blur on box-shadow*/
+        box-shadow: 0 1px 0 rgba(255, 255, 255, .2), inset 0 4px 5px rgba(0, 0, 0, .2), inset 0 1px 0 rgba(0, 0, 0, .2);
+        background-color: #ffffed;
+    }
+}
+
+@media print {
+    #infoContainer, #scheduleContainer, #headerContainer {
+        border: 1px solid rgba(0,0,0,0.1);
+        background-color: inherit;
+    }
 }
 
 paper-button::shadow #ripple {
@@ -33,8 +57,9 @@ paper-button[active] {
     box-sizing: border-box;
 
 }
+
 paper-button:not([active]) {
-    background-color: rgba(0,0,0,0.10);
+    background-color: rgba(0, 0, 0, 0.10);
     border-radius: 3px;
     box-sizing: border-box;
 }
@@ -55,7 +80,8 @@ paper-button {
     display: block;
     width: 30%;
     height: 90%;
-    border: 1px solid rgba(200,50,50,0.3);
+    padding-top: 14px;
+    /*border: 1px solid rgba(200,50,50,0.3);*/
 }
 
 #scheduleSelectContainer {
@@ -95,4 +121,30 @@ paper-button {
 
 * {
     -webkit-user-select: none; /* make default to not be able to select text anywhere to avoid annoying highlighting */
+}
+
+@media print {
+    core-splitter {
+        width: 0 !important;
+    }
+    #headerContainer, core-splitter, #infoContainer, paper-slider {
+        position: absolute;
+        width: 0;
+        height: 0;
+        visibility: hidden;
+    }
+    #scheduleContainer {
+        display: block;
+        position: relative;
+        margin: 0;
+        height: 100% !important;
+        width: 120% !important;
+        background-color: white !important;
+        overflow: hidden;
+        border-radius: 0;
+        border: none;
+    }
+    html [flex] {
+        flex: 0 0 0 !important;
+    }
 }

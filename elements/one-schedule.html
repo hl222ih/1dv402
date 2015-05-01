@@ -4,34 +4,41 @@
 <link rel="import" href="one-shift.html"/>
 <link rel="import" href="one-employee.html"/>
 <link rel="import" href="../bower_components/paper-button/paper-button.html"/>
+<link rel="import" href="../bower_components/core-splitter/core-splitter.html"/>
 
-<polymer-element unresolved name="one-schedule">
+<polymer-element unresolved name="one-schedule" horizontal layout>
     <template>
         <link rel="stylesheet" href="one-schedule.css" type="text/css">
-        <div id="headerContainer">
-            <div id="scheduleSelectContainer" class="selectContainer">
+        <div vertical layout style="width: 80%; height: 100%;">
+            <div id="headerContainer" style="display: block; width: 98%; max-height: 10%;">
+                <div id="scheduleSelectContainer" class="selectContainer">
+                </div>
+                <div id="employeeSelectContainer" class="selectContainer">
+                    <template repeat="{{employee in currentSchedule.employees}}">
+                        <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
+                    </template>
+                </div>
+                <div id="shiftSelectContainer" class="selectContainer">
+                    <!--some temp data-->
+                    <div>A1: 07:00-16:00</div>
+                    <div>A2: 07:00-15:00</div>
+                    <div>B1: 09:00-16:00</div>
+                    <div>B2: 09:00-15:00</div>
+                    <div>C1: 16:00-21:15</div>
+                    <div>C2: 16:30-21:30</div>
+                    <div>R1: 12:00-16:00</div>
+                </div>
             </div>
-            <div id="employeeSelectContainer" class="selectContainer">
-                <template repeat="{{employee in currentSchedule.employees}}">
-                    <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
+            <div flex id="scheduleContainer" style="margin: 1%; width: 98%;">
+                <paper-slider id="paperSlider" min="200" max="900" value="[[pxWeekWidth]]" immediateValue="{{pxWeekWidth}}"></paper-slider>
+                <template repeat="{{weekSchedule, index in currentSchedule.weekSchedules}}">
+                    <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 288 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
                 </template>
             </div>
-            <div id="shiftSelectContainer" class="selectContainer">
-                <!--some temp data-->
-                <div>A1: 07:00-16:00</div>
-                <div>A2: 07:00-15:00</div>
-                <div>B1: 09:00-16:00</div>
-                <div>B2: 09:00-15:00</div>
-                <div>C1: 16:00-21:15</div>
-                <div>C2: 16:30-21:30</div>
-                <div>R1: 12:00-16:00</div>
-            </div>
         </div>
-        <div id="scheduleContainer">
-            <paper-slider id="paperSlider" min="300" max="900" value="[[pxWeekWidth]]" immediateValue="{{pxWeekWidth}}"></paper-slider>
-            <template repeat="{{weekSchedule, index in currentSchedule.weekSchedules}}">
-                <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 288 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
-            </template>
+        <core-splitter direction="left" allowOverflow="true"></core-splitter>
+        <div flex id="infoContainer" style="font-family: 'Trebuchet MS', Helvetica, sans-serif;">
+            right
         </div>
     </template>
     <script src="../bower_components/svg.js/dist/svg.js"></script>
@@ -65,6 +72,11 @@
                         {
                             code: "C1", //10:30-21:15
                             startTime: 630,
+                            endTime: 1275
+                        },
+                        {
+                            code: "C2", //10:30-21:15
+                            startTime: 660,
                             endTime: 1275
                         },
                         {
@@ -123,7 +135,15 @@
                             workPlaceCode: "WP1",
                             weeks: [1],
                             dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "C2",
+                            workPlaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 1
                         }
+
                     ]
                 },
                 {
@@ -483,148 +503,7 @@
                                 tempShifts.splice(s, 1); //shouldnt work
                             });
 
-
                             tempShifts.push(currentShift);
-
-                            /*                            var currentShift = currentShifts[p];
-                                                        //x = hur många andra shifts har startTime < currentShifts[p].endTime eller endTime > currentShifts[p].startTime
-                                                        var currentStartTime = getAdjustedStartTime(currentShift, dayOfWeek);
-                                                        var currentEndTime = getAdjustedEndTime(currentShift, dayOfWeek);
-
-                                                        var widthShifts = currentShifts.filter(function(shift) {
-                                                            var otherStartTime = getAdjustedStartTime(shift, dayOfWeek);
-                                                            var otherEndTime = getAdjustedEndTime(shift, dayOfWeek);
-                                                            // andra passets startTid eller slutTid måste vara större än startTiden för mitt pass + mindre än slutTiden för mitt pass
-                                                            return (((otherStartTime > currentStartTime && otherStartTime < currentEndTime) || (otherEndTime > currentStartTime && otherEndTime < currentEndTime)) && shift !== currentShift);
-                                                        });
-                                                        if (isFirstOrSecondEvaluated(currentShift, dayOfWeek) === "first") {
-                                                            currentShift.numberOfShiftsWideForFirst = 1 + widthShifts.length;
-                                                        } else {
-                                                            currentShift.numberOfShiftsWideForSecond = 1 + widthShifts.length;
-                                                        }
-                                                        currentShift.isAltered = true;
-                                                       // if (p === 0) {
-                                                            for (var s = 0; s < widthShifts.length; s++) {
-                                                                if (widthShifts[s].isAltered !== true) {
-                                                                    if (isFirstOrSecondEvaluated(widthShifts[s], dayOfWeek) === "first") {
-                                                                        widthShifts[s].numberOfShiftsWideForFirst = 1 + widthShifts.length;
-                                                                    } else {
-                                                                        widthShifts[s].numberOfShiftsWideForSecond = 1 + widthShifts.length;
-                                                                    }
-                                                                }
-                                                            }
-
-                                                        //}*/
-
-                            //krockar om:
-                            //startTiden för det andra passet är mindre än slutTiden för mitt pass
-                            //samtidigt som
-                            //slutTiden för det andra passet är mindre än startTiden för mitt pass
-                            //ELLER
-                            //slutTiden för det andra passet är större än startTiden för mitt pass
-                            //samtidigt som
-                            //startTiden för det andra passet är mindre än slutTiden för migg pass
-
-
-                            //
-                            //A
-                            //A
-                            //AM  startTiden för det andra passet är mindre än startTiden för mitt pass
-                            // M  slutTiden för det andra passet är större än startTiden för mitt pass
-                            //
-                            //
-                            //
-                            //A
-                            //A
-                            //AM  samma som ovan
-                            //AM
-                            //A
-                            //
-                            //
-                            // M  startTiden för det andra passet är mindre än slutTiden för mitt pass
-                            //AM  startTiden för det andra passet är större än startTiden för mitt pass
-                            // M
-                            //
-                            // M  startTiden för det andra passet är mindre än slutTiden för mitt pass
-                            //AM  startTiden för det andra passet är större än startTiden för mitt pass
-                            //A
-                            //A
-                            //
-                            // antingen startar det inom intervallet för mitt pass, eller så slutar det inom intervallet
-                            // andra passets startTid eller slutTid måste vara större än startTiden för mitt pass + mindre än slutTiden för mitt pass
-
-/*
-                            var currentShift,
-                                    earlierShift,
-                                    earlierShiftStartTime,
-                                    earlierShiftEndTime,
-                                    currentShiftStartTime,
-                                    currentShiftEndTime;
-
-                            if (p === 1) {
-                                currentShift = currentShifts[p];
-                                earlierShift = currentShifts[p-1];
-                                earlierShiftStartTime = getAdjustedStartTime(earlierShift, dayOfWeek);
-                                earlierShiftEndTime = getAdjustedEndTime(earlierShift, dayOfWeek);
-                                currentShiftStartTime = getAdjustedStartTime(currentShift, dayOfWeek);
-                                currentShiftEndTime = getAdjustedEndTime(currentShift, dayOfWeek);
-                                if (currentShiftStartTime < earlierShiftEndTime) {
-                                    if (isFirstOrSecondEvaluated(earlierShift, dayOfWeek) === "first") {
-                                        earlierShift.numberOfShiftsWideForFirst++;
-                                    } else {
-                                        earlierShift.numberOfShiftsWideForSecond++;
-                                    }
-                                    if (isFirstOrSecondEvaluated(currentShift, dayOfWeek) === "first") {
-                                        currentShift.numberOfShiftsWideForFirst++;
-                                        currentShift.positionForFirst++;
-                                    } else {
-                                        currentShift.numberOfShiftsWideForSecond++;
-                                        currentShift.positionForSecond++;
-                                    }
-                                }
-                            }
-                            if (p === 2) {
-                                currentShift = currentShifts[p];
-                                earlierShift = currentShifts[p-1];
-                                var earlierEarlierShift = currentShifts[p-2];
-                                currentShiftStartTime = getAdjustedStartTime(currentShift, dayOfWeek);
-                                currentShiftEndTime = getAdjustedEndTime(currentShift, dayOfWeek);
-                                earlierShiftStartTime = getAdjustedStartTime(earlierShift, dayOfWeek);
-                                earlierShiftEndTime = getAdjustedEndTime(earlierShift, dayOfWeek);
-                                var earlierEarlierShiftStartTime = getAdjustedStartTime(earlierEarlierShift, dayOfWeek);
-                                var earlierEarlierShiftEndTime = getAdjustedEndTime(earlierEarlierShift, dayOfWeek);
-                                if (currentShiftStartTime < earlierShiftEndTime) {
-                                    if (currentShiftStartTime < earlierEarlierShiftEndTime) {
-                                        //earlier+earlierEarlier 2->3 wide
-                                        if (isFirstOrSecondEvaluated(earlierShift, dayOfWeek) === "first") {
-                                            earlierShift.numberOfShiftsWideForFirst++;
-                                        } else {
-                                            earlierShift.numberOfShiftsWideForSecond++;
-                                        }
-
-                                        if (isFirstOrSecondEvaluated(earlierEarlierShift, dayOfWeek) === "first") {
-                                            earlierEarlierShift.numberOfShiftsWideForFirst++;
-                                        } else {
-                                            earlierEarlierShift.numberOfShiftsWideForSecond++;
-                                        }
-
-                                        if (isFirstOrSecondEvaluated(currentShift, dayOfWeek) === "first") {
-                                            currentShift.numberOfShiftsWideForFirst = currentShift.numberOfShiftsWideForFirst + 2;
-                                            currentShift.positionForFirst = currentShift.positionForFirst + 2;
-                                        } else {
-                                            currentShift.numberOfShiftsWideForSecond = currentShift.numberOfShiftsWideForSecond + 2;
-                                            currentShift.positionForSecond = currentShift.positionForSecond + 2;
-                                        }
-                                    } else {
-                                        if (isFirstOrSecondEvaluated(currentShift, dayOfWeek) === "first") {
-                                            currentShift.numberOfShiftsWideForFirst++;
-                                        } else {
-                                            currentShift.numberOfShiftsWideForSecond++;
-                                        }
-                                    }
-                                }
-                            }
-*/
                         }
                     }
                 }
