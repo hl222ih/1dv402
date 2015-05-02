@@ -16,11 +16,11 @@
                 Polymer.addEventListener(this.parentNode.host, event, this[handler].bind(this));
             otherwise core-drag-drop will only listen to dragging child elements, not the Polymer element itself
         -->
-        <div id="shiftCode">{{shift.code}}</div>
         <!--<div id="workplaceCode">{{shift.workplace.code}}</div>-->
         <template repeat="{{employee in shift.employees}}">
             <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
         </template>
+        <div id="shiftCode" style="font-weight: bolder;">{{shift.code}}</div>
         <div id="displayTime">{{shift.startTime|minutesToHHMMString}}-{{shift.endTime|minutesToHHMMString}}</div>
     </template>
     <script>
@@ -160,6 +160,7 @@
                     })
                 },
                 updateStyles: function() {
+                    //todo: fix bug for fontSize of shifttime which gets out of control when dragged/dropped
                     var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
                         pxHeight = parseFloat(getComputedStyle(this).height, 10),
                         width = pxWidth * 5,

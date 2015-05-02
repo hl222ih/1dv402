@@ -75,7 +75,7 @@
                             endTime: 1275
                         },
                         {
-                            code: "C2", //10:30-21:15
+                            code: "C2", //11-21
                             startTime: 660,
                             endTime: 1275
                         },
@@ -142,8 +142,49 @@
                             workPlaceCode: "WP1",
                             weeks: [1],
                             dayOfWeek: 1
-                        }
-
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [3],
+                            dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "A1",
+                            workPlaceCode: "WP1",
+                            weeks: [3],
+                            dayOfWeek: 2
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "C2",
+                            workPlaceCode: "WP1",
+                            weeks: [3],
+                            dayOfWeek: 2
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [3],
+                            dayOfWeek: 2
+                        },
                     ]
                 },
                 {
@@ -401,15 +442,10 @@
                     for (var dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
                         var currentShifts = this.currentSchedule.weekSchedules[currentWeekIndex].shifts.filter( function(shift) {
                             return ((shift.week === currentWeekIndex + 1 && shift.dayOfWeek === dayOfWeek && isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") ||
-                            (shift.week === currentWeekIndex + 1 && shift.dayOfWeek === dayOfWeek && isFirstOrSecondEvaluated(shift, dayOfWeek) === "second") ||
+                            (shift.week === currentWeekIndex + 1 && shift.dayOfWeek === dayOfWeek - 1 && isFirstOrSecondEvaluated(shift, dayOfWeek) === "second") ||
                             (shift.week !== currentWeekIndex + 1 && shift.dayOfWeek === 7 && dayOfWeek === 1 && isFirstOrSecondEvaluated(shift, dayOfWeek) === "second"));
                         });
 
-                        console.log(currentShifts.length);
-                        if (currentShifts.length === 4) {
-                            console.log("weekIndex: " + (currentWeekIndex + 1) + ", week: " +  currentShifts[0].week + ", day: " + currentShifts[0].dayOfWeek + ", times: " + currentShifts[0].startTime + "-" + currentShifts[0].endTime + ".");
-                            console.log("weekIndex: " + (currentWeekIndex + 1) + ", week: " +  currentShifts[1].week + ", day: " + currentShifts[1].dayOfWeek + ", times: " +  currentShifts[1].startTime + "-" + currentShifts[1].endTime + ".");
-                        }
                         currentShifts = currentShifts.sort(function(a,b) {
                             // if shift spans over two days, and shift's dayOfWeek is not equal to current day's dayOfWeek, set startTime to 0.
                             // if shift spans over two days, and shift's dayOfWeek is equal to current day's dayOfWeek, set endTime to 1440.
@@ -427,83 +463,101 @@
                             return result;
                         });
 
-                        var tempShifts = [];
-                        for (var p = 0; p < currentShifts.length; p++) {
-                            var currentShift = currentShifts[p];
-
-                            if (tempShifts.length === 0) {
-                                tempShifts.push(currentShift);
-                                continue;
+                        var setShiftPosition = function(shift, position) {
+                            if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
+                                shift.positionForFirst = position;
+                            } else {
+                                shift.positionForSecond = position;
                             }
+                        };
+                        var getShiftPosition = function(shift) {
+                            if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
+                                return shift.positionForFirst;
+                            } else {
+                                return shift.positionForSecond;
+                            }
+                        };
+                        var setShiftWidth = function(shift, width, addToPrevious) {
+                            if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
+                                if (addToPrevious) {
+                                    shift.numberOfShiftsWideForFirst = shift.numberOfShiftsWideForFirst + width;
+                                } else {
+                                    shift.numberOfShiftsWideForFirst = width;
+                                }
+                            } else {
+                                if (addToPrevious) {
+                                    shift.numberOfShiftsWideForSecond = shift.numberOfShiftsWideForSecond + width;
+                                } else {
+                                    shift.numberOfShiftsWideForSecond = width;
+                                }
+                            }
+                        };
+                        var getShiftWidth = function(shift) {
+                            if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
+                                return shift.numberOfShiftsWideForFirst;
+                            } else {
+                                return shift.numberOfShiftsWideForSecond;
+                            }
+                        };
+
+                        var currentShiftIndex;
+                        for (currentShiftIndex = 0; currentShiftIndex < currentShifts.length; currentShiftIndex++) {
+                            var currentShift = currentShifts[currentShiftIndex];
                             var currentStartTime = getAdjustedStartTime(currentShift, dayOfWeek);
                             var currentEndTime = getAdjustedEndTime(currentShift, dayOfWeek);
-
-                            var setShiftPosition = function(shift, position) {
-                                if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
-                                    shift.positionForFirst = position;
-                                } else {
-                                    shift.positionForSecond = position;
-                                }
-                            };
-                            var getShiftPosition = function(shift) {
-                                if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
-                                    return shift.positionForFirst;
-                                } else {
-                                    return shift.positionForSecond;
-                                }
-                            };
-                            var setShiftWidth = function(shift, width, addToPrevious) {
-                                if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
-                                    if (addToPrevious) {
-                                        shift.numberOfShiftsWideForFirst = shift.numberOfShiftsWideForFirst + width;
-                                    } else {
-                                        shift.numberOfShiftsWideForFirst = width;
-                                    }
-                                } else {
-                                    if (addToPrevious) {
-                                        shift.numberOfShiftsWideForSecond = shift.numberOfShiftsWideForSecond + width;
-                                    } else {
-                                        shift.numberOfShiftsWideForSecond = width;
-                                    }
-                                }
-                            };
-                            var getShiftWidth = function(shift) {
-                                if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
-                                    return shift.numberOfShiftsWideForFirst;
-                                } else {
-                                    return shift.numberOfShiftsWideForSecond;
-                                }
-                            };
-                            var removeTempShifts = [];
-                            for (var s = 0; s < tempShifts.length; s++) {
-                                var otherStartTime = getAdjustedStartTime(tempShifts[s], dayOfWeek);
-                                var otherEndTime = getAdjustedEndTime(tempShifts[s], dayOfWeek);
-
-                                var isColliding =  ((otherStartTime > currentStartTime && otherStartTime < currentEndTime) || (otherEndTime > currentStartTime && otherEndTime < currentEndTime));
-                                if (isColliding) {
-                                    if (removeTempShifts.length > 0) {
-                                        //kanske kontrollera om det går att sätta bredare?
-                                        setShiftWidth(currentShift, getShiftWidth(tempShifts[s]) /1.5, false);
-                                        //kanske kontrollera om rTS[0] finns ens
-                                        setShiftPosition(currentShift, tempShifts[removeTempShifts[0]]);
-
-                                    } else {
-                                        setShiftWidth(tempShifts[s], 1, true);
-                                        setShiftWidth(currentShift, getShiftWidth(tempShifts[s]), false);
-                                        setShiftPosition(currentShift, getShiftPosition(tempShifts[s]) + 1);
-                                    }
-                                } else {
-                                    //setShiftWidth(tempShifts[s], 1, true);
-                                    //setShiftWidth(currentShift, getShiftWidth(tempShifts[s]), false);
-                                    //setShiftPosition(currentShift, getShiftPosition(tempShifts[s]) + 1);
-                                    removeTempShifts.push(s);
-                                }
+                            if (currentShift.dayOfWeek === 1) {
+                                var haltHere;
                             }
-                            removeTempShifts.forEach( function(s) {
-                                tempShifts.splice(s, 1); //shouldnt work
+
+                            var timeCollidingShifts = currentShifts.filter( function(shift) {
+                                if (shift === currentShift) return true;
+                                var otherStartTime = getAdjustedStartTime(shift, dayOfWeek);
+                                var otherEndTime = getAdjustedEndTime(shift, dayOfWeek);
+                                var isColliding =  ((otherStartTime <= currentStartTime && otherEndTime > currentStartTime) || (otherStartTime > currentStartTime && otherStartTime < currentEndTime));
+                                var isLeftColliding = (isColliding && currentShifts.indexOf(currentShift) > currentShifts.indexOf(shift));
+                                return isLeftColliding;
                             });
 
-                            tempShifts.push(currentShift);
+                            setShiftWidth(currentShift, timeCollidingShifts.length, false);
+                            timeCollidingShifts.forEach( function (shift) {
+                                if (getShiftWidth(shift) < timeCollidingShifts.length) {
+                                    setShiftWidth(shift, 1, true);
+                                }
+                            });
+
+                            var spaceFound = false;
+                            var shiftPosition;
+                            var currentShiftWidth = getShiftWidth(currentShift);
+                            var shiftWidth = currentShiftWidth;
+                            var currentShiftPosition = getShiftPosition(currentShift);
+                            while (!spaceFound && shiftWidth < 10) { //10 to prevent an infinite loop if a bug is encountered
+                                for (shiftPosition = 1; shiftPosition <= shiftWidth; shiftPosition++) {
+                                    var spaceCollidingShifts = timeCollidingShifts.filter( function (shift) {
+                                        if (shift === currentShift) return false;
+                                        var otherShiftPosition = getShiftPosition(shift);
+                                        var isColliding = (otherShiftPosition === shiftPosition && currentShifts.indexOf(currentShift) > currentShifts.indexOf(shift));
+                                        if (isColliding) {
+                                            return true;
+                                        } else {
+                                            return false;
+                                        }
+                                    });
+                                    if (spaceCollidingShifts.length === 0) {
+                                        spaceFound = true;
+                                        currentShiftPosition = shiftPosition;
+                                        break;
+                                    }
+                                }
+                                if (shiftWidth === currentShiftPosition && !spaceFound) {
+                                    shiftWidth = shiftPosition + 1;
+                                }
+                            }
+                            console.log(shiftWidth);
+                            if (currentShiftPosition > shiftWidth) {
+                                shiftWidth = currentShiftPosition;
+                            }
+                            setShiftWidth(currentShift, shiftWidth, false);
+                            setShiftPosition(currentShift, currentShiftPosition);
                         }
                     }
                 }

@@ -8,7 +8,7 @@
         <div id="weekSchedule">
             <template repeat="{{weekDay, index in weekDays}}">
                 <div id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="width: {{pxDayWidth}}px; left: {{index|pxDayLeftPosition}}px; height: {{pxHeight}}px;">
-                    <div class="weekDayHeader">{{weekDay}}</div>
+                    <!--<div class="weekDayHeader">{{weekDay}}</div>-->
                 </div>
             </template>
             <template repeat="{{shift, index in shifts}}">
@@ -26,7 +26,11 @@
                 </template>
             </template>
         </div>
-        <div id="weekScheduleOverlay"></div>
+        <div id="weekScheduleOverlay">
+        </div>
+        <template repeat="{{weekDay, index in weekDays}}">
+            <div class="weekDayHeader" style="width: {{pxDayWidth}}px; left: {{index|pxDayLeftPosition}}px; height: 10px; top: -11px; font-size: 10px; color: black; background-color: transparent;">{{weekDay}}</div>
+        </template>
     </template>
     <script>
         (function() {
