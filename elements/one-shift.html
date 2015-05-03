@@ -61,7 +61,7 @@
 
                     //style the drag avatar
                     dragInfo.avatar.style.cssText = 'z-index: 1000; left: -14px; top: -8px; border: 1px solid gray' + '; width: 24px; height: 12px; border-radius: 25%; text-align: center; box-shadow: 0 1px 0 rgba(255,255,255,.2), inset 0 4px 5px rgba(0,0,0,.2), inset 0 1px 0 rgba(0,0,0,.2); border-radius: 5px;'; //should be done better
-                   dragInfo.avatar.style.backgroundColor = "lightgrey";
+                    dragInfo.avatar.style.backgroundColor = "lightgrey";
                     dragInfo.avatar.innerText = this.shift.code;
                     dragInfo.avatar.style.fontSize = "60%";
 
@@ -157,32 +157,27 @@
                 pxDayWidthChanged: function () {
                     this.listOfInstances.forEach( function (shift) {
                         shift.updateStyles();
-                    })
+                    });
                 },
                 updateStyles: function() {
-                    //todo: fix bug for fontSize of shifttime which gets out of control when dragged/dropped
-                    var pxWidth = parseFloat(getComputedStyle(this).width, 10), //more accurate than offsetWidth
-                        pxHeight = parseFloat(getComputedStyle(this).height, 10),
+                    var pxWidth = this.pxDayWidth / (this.part === "first" ? this.shift.numberOfShiftsWideForFirst : this.shift.numberOfShiftsWideForSecond), //parseFloat(getComputedStyle(this).width), //more accurate than offsetWidth (but includes overflowed elements = possible problem?)
+                        pxHeight = parseFloat(getComputedStyle(this).height),
                         width = pxWidth * 5,
                         height = pxHeight * 5,
                         minuteHeight = height / MINUTES_IN_A_DAY;
 
                     if (this.part === "first") {
-                        this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%"; //todo: fix
-                        this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (this.shift.dayOfWeek - 1) + (this.shift.positionForFirst - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%";
+                        this.style.width = (102 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%"; //todo: fix
                         this.$.displayTime.style.fontSize = (pxWidth / (this.shift.numberOfShiftsWideForFirst === 1 ? 6 : 3)) + "px";
+                        this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (this.shift.dayOfWeek - 1) + (this.shift.positionForFirst - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%";
                     } else if (this.part === "second") {
                         this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForSecond) + "%"; //todo: fix
                         this.$.displayTime.style.fontSize = (pxWidth / (this.shift.numberOfShiftsWideForSecond === 1 ? 6 : 3)) + "px";
-
                         var dayOfWeek = this.shift.dayOfWeek <= 6 ? this.shift.dayOfWeek + 1 : 1;
                         this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (dayOfWeek - 1) + (this.shift.positionForSecond - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForSecond) + "%";
                     }
 
                     this.setShiftTopHeightValues();
-
-                    //this.style.height = this.calcMinutesOfCurrentDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
-                    //this.style.top = this.shift.startTime / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + "px";
                 },
                 mouseOverShift: function(e) {
                     var self = this;

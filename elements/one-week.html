@@ -15,9 +15,9 @@
                 <!--night shifts are divided into two html-elements (who share shift object)-->
                 <template if="{{shift|shouldDisplayFirstElement}}">
                     <!--observe changes in shift.employees by including shift.employees.length in the expression -->
-                    <one-shift id="oneShift" part="first" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
+                    <one-shift id="oneShift" part="first" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
                     <template if="{{shift|shouldDisplaySecondElementToo}}">
-                        <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
+                        <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
                     </template>
                 </template>
                 <template if="{{shift|shouldDisplaySecondElementOnly}}">
