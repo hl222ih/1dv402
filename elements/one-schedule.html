@@ -19,14 +19,9 @@
                     </template>
                 </div>
                 <div id="shiftSelectContainer" class="selectContainer">
-                    <!--some temp data-->
-                    <div>A1: 07:00-16:00</div>
-                    <div>A2: 07:00-15:00</div>
-                    <div>B1: 09:00-16:00</div>
-                    <div>B2: 09:00-15:00</div>
-                    <div>C1: 16:00-21:15</div>
-                    <div>C2: 16:30-21:30</div>
-                    <div>R1: 12:00-16:00</div>
+                    <template repeat="{{shift in currentSchedule.shiftDefinitions}}">
+                        <one-shift id="oneShift" class="shiftData" shift={{shift}} dragInfo="{{dragInfo}}" style="background-color: #eee"></one-shift>
+                    </template>
                 </div>
             </div>
             <div flex id="scheduleContainer" style="margin: 1%; width: 98%;">
@@ -62,7 +57,9 @@
                         {
                             code: "A1", //07:00-16:00
                             startTime: 420,
-                            endTime: 960
+                            endTime: 960,
+                            employeeCodes: ["DD"],
+                            employees: []
                         },
                         {
                             code: "A2",
@@ -92,7 +89,6 @@
                     ],
                     shifts: [
                         {
-                            employeeCode: "AA",
                             employeeCodes: ["AA"],
                             shiftCode: "A1",
                             workplaceCode: "WP1",
@@ -100,7 +96,6 @@
                             dayOfWeek: 1
                         },
                         {
-                            employeeCode: "BB",
                             employeeCodes: ["AA", "BB"],
                             shiftCode: "C1",
                             workplaceCode: "WP2",
@@ -108,7 +103,6 @@
                             dayOfWeek: 1
                         },
                         {
-                            employeeCode: "AA",
                             employeeCodes: [],
                             shiftCode: "A1",
                             workplaceCode: "WP1",
@@ -331,6 +325,9 @@
                 if (scheduleData === null) return;
 
                 this.currentSchedule.shiftDefinitions = scheduleData.shiftDefinitions;
+                this.currentSchedule.shiftDefinitions.forEach( function (shiftDefinition) {
+                    shiftDefinition.employees = [];
+                });
                 this.currentSchedule.numberOfWeeks = scheduleData.numberOfWeeks;
                 this.currentSchedule.employees = this.employeesFromCodes(scheduleData.employeeCodes);
 

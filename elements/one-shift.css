@@ -9,6 +9,12 @@
     border-radius: 5px;
 }
 
+:host(.shiftData) {
+    height: 12px;
+    width: 80px;
+    position: relative;
+    display: inline-block;
+}
 
 @media screen {
     :host {
@@ -32,6 +38,15 @@
     text-align: center;
 }
 
+:host(.shiftData)  > #shiftCode, #workplaceCode, #displayTime {
+    text-align: left;
+    display: inline-block;
+    padding-left: 5px;
+}
+
+#displayTime {
+    pointer-events: none !important;
+}
 #errorIcon {
     position: absolute;
     top: -7px;
