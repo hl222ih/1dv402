@@ -32,7 +32,7 @@
             <div flex id="scheduleContainer" style="margin: 1%; width: 98%;">
                 <paper-slider id="paperSlider" min="200" max="900" value="[[pxWeekWidth]]" immediateValue="{{pxWeekWidth}}"></paper-slider>
                 <template repeat="{{weekSchedule, index in currentSchedule.weekSchedules}}">
-                    <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 288 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
+                    <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 210 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
                 </template>
             </div>
         </div>
@@ -324,7 +324,7 @@
                 this.populateCurrentSchedule("Schema 1"); //pick first for now
             },
             populateCurrentSchedule: function(scheduleName) {
-                var scheduleData = this.schedules.filter( function (schedule) {
+                var scheduleData = this.schedules.filter(function (schedule) {
                     return schedule.name === scheduleName;
                 })[0];
 
@@ -337,21 +337,21 @@
                 this.currentSchedule.name = scheduleData.name;
                 this.currentSchedule.weekSchedules = [];
                 for (var i = 0; i < scheduleData.numberOfWeeks; i++) {
-                    this.currentSchedule.weekSchedules.push({ shifts: [] });
+                    this.currentSchedule.weekSchedules.push({shifts: []});
                 }
 
-                scheduleData.shifts.forEach( function (shiftData) {
-                    var shiftDefinition = scheduleData.shiftDefinitions.filter( function(shiftDefinition) {
+                scheduleData.shifts.forEach(function (shiftData) {
+                    var shiftDefinition = scheduleData.shiftDefinitions.filter(function (shiftDefinition) {
                         return shiftDefinition.code === shiftData.shiftCode;
                     })[0];
                     for (var i = 0; i < shiftData.weeks.length; i++) {
                         var shift = {
                             code: shiftData.shiftCode,
-                            employee: this.employees.filter( function(employee) {
+                            employee: this.employees.filter(function (employee) {
                                 return employee.code === shiftData.employeeCode;
                             })[0],
                             employees: this.employeesFromCodes(shiftData.employeeCodes),
-                            workplace: this.workplaces.filter( function(workplace) {
+                            workplace: this.workplaces.filter(function (workplace) {
                                 return workplace.code === shiftData.workplaceCode;
                             })[0],
                             week: shiftData.weeks[i],
@@ -381,7 +381,9 @@
 
                     }
                 }, this);
-
+                this.adjustShiftWidths();
+            },
+            adjustShiftWidths: function () {
                 var getAdjustedStartTime = function (shift, dayOfWeek) {
                     var startTime;
 
@@ -603,7 +605,49 @@
                 }
             },
             moveShift: function(dragInfo) {
-                //soon
+                //if the target is a "oneShift"...
+                if (dragInfo.dropTarget && dragInfo.dropTarget.id === "weekDay") {
+
+                    var dropWeekDayIndex = parseInt(dragInfo.dropTarget.attributes['weekDayIndex'].value);
+
+                    var dropOneWeek = dragInfo.dropTarget.parentElement.offsetParent;
+                    var dropShifts = dropOneWeek.data.shifts;
+                    var draggedShift =  dragInfo.draggedItem.shift;
+                    //if this week does not already have the "oneShift" or if this week, but not this "weekDay" have the "oneShift"
+                    if (dropShifts.indexOf(draggedShift) === -1 || (dropShifts.indexOf(draggedShift) !== -1 && draggedShift.dayOfWeek !== dropWeekDayIndex + 1)) {
+                        draggedShift.week = dropOneWeek.weekNumber;
+                        draggedShift.dayOfWeek = dropWeekDayIndex + 1;
+
+                        var originOneWeek = dragInfo.draggedItem.parentElement.offsetParent;
+
+                        //sometimes one shift spans over several weeks, fetch all weeks that holds the dragged shift.
+                        var weekSchedulesWithShift = this.currentSchedule.weekSchedules.filter( function (weekSchedule) {
+                            return weekSchedule.shifts.indexOf(draggedShift) !== -1;
+                        });
+                        //...remove this shift from this/these weeks.
+                        weekSchedulesWithShift.forEach( function(weekSchedule) {
+                            weekSchedule.shifts.splice(weekSchedule.shifts.indexOf(draggedShift), 1);
+                        });
+                        //add the shift to the week it is dragged to. Make a copy to trigger a UI update.
+                        var dropWeekSchedule = this.currentSchedule.weekSchedules[dropOneWeek.weekNumber - 1];
+                        dropWeekSchedule.shifts.push(JSON.parse(JSON.stringify(draggedShift)));
+
+                        //if the shift is dragged to a Sunday and the shift spans over two days, also add it to next week's shifts.
+                        if (draggedShift.dayOfWeek === 7 && draggedShift.endTime <= draggedShift.startTime) {
+                            var nextDropWeekSchedule;
+                            //if next week is within the number of weeks, set next week to the dragged-to week + 1
+                            if (dropOneWeek.weekNumber < this.currentSchedule.numberOfWeeks) {
+                                nextDropWeekSchedule = this.currentSchedule.weekSchedules[dropOneWeek.weekNumber - 1 + 1];
+                                //...or else, there are no more weeks, set next week to the first week
+                            } else {
+                                nextDropWeekSchedule = this.currentSchedule.weekSchedules[0];
+                            }
+                            //add a copy to the next week. Make a copy to trigger a UI update.
+                            nextDropWeekSchedule.shifts.push(JSON.parse(JSON.stringify(draggedShift)));
+                        }
+                    }
+                    this.adjustShiftWidths(); //recalculate the shifts' widths.
+                }
             },
             disablePointerEventsForOneShifts: function() {
                 var els = document.querySelectorAll('* /deep/ #oneShift');
