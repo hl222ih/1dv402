@@ -2,12 +2,12 @@
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="one-shift.html"/>
 
-<polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout dragInfo" >
+<polymer-element name="one-week" attributes="data pxWidth pxHeight weekNumber layout dragInfo">
     <template>
         <link rel="stylesheet" href="one-week.css" type="text/css">
         <div id="weekSchedule">
             <template repeat="{{weekDay, index in weekDays}}">
-                <div id="weekDay" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="width: {{pxDayWidth}}px; left: {{index|pxDayLeftPosition}}px; height: {{pxHeight}}px;">
+                <div id="weekDay" weekDayIndex="{{index}}" on-mouseover="{{mouseOverWeekDay}}" on-mouseout="{{mouseOutOfWeekDay}}" style="width: {{pxDayWidth}}px; left: {{index|pxDayLeftPosition}}px; height: {{pxHeight}}px;">
                     <!--<div class="weekDayHeader">{{weekDay}}</div>-->
                 </div>
             </template>
@@ -75,6 +75,7 @@
                 dragInfo: {},
                 mouseOverWeekDay: function(e) {
                     if (this.dragInfo.draggedItem && this.dragInfo.draggedItem.id === "oneShift") {
+                        this.dragInfo.dropTarget = e.currentTarget;
                         e.currentTarget.classList.add('dragShiftHover');
                     }
                 },

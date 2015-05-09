@@ -77,8 +77,8 @@
                         //added specialRelatedTarget = inEvent.currentTarget to var gestureProto = { ... } in polymer.js
                         //element inside the shadowDOM that initialized the drag-operation:
                         //added specialRelatedDownTarget = t.downTarget to var gestureProto = { ... } in polymer.js
+                        //dragInfo.dropTarget = dragInfo.event.specialRelatedTarget;
 
-                        dragInfo.dropTarget = dragInfo.event.specialRelatedTarget;
                     };
                     dragInfo.drop = function (dragInfo) {
                         var dropTarget = dragInfo.event.relatedTarget;
@@ -160,14 +160,14 @@
                     });
                 },
                 updateStyles: function() {
-                    var pxWidth = this.pxDayWidth / (this.part === "first" ? this.shift.numberOfShiftsWideForFirst : this.shift.numberOfShiftsWideForSecond), //parseFloat(getComputedStyle(this).width), //more accurate than offsetWidth (but includes overflowed elements = possible problem?)
+                    var pxWidth = (this.pxDayWidth - 1) / (this.part === "first" ? this.shift.numberOfShiftsWideForFirst : this.shift.numberOfShiftsWideForSecond), //parseFloat(getComputedStyle(this).width), //more accurate than offsetWidth (but includes overflowed elements = possible problem?)
                         pxHeight = parseFloat(getComputedStyle(this).height),
                         width = pxWidth * 5,
                         height = pxHeight * 5,
                         minuteHeight = height / MINUTES_IN_A_DAY;
 
                     if (this.part === "first") {
-                        this.style.width = (102 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%"; //todo: fix
+                        this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%"; //todo: fix
                         this.$.displayTime.style.fontSize = (pxWidth / (this.shift.numberOfShiftsWideForFirst === 1 ? 6 : 3)) + "px";
                         this.style.left = (427 / 428 * 100 / DAYS_IN_A_WEEK * (this.shift.dayOfWeek - 1) + (this.shift.positionForFirst - 1) * 100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%";
                     } else if (this.part === "second") {
