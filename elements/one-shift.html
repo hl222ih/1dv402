@@ -31,7 +31,7 @@
 
             Polymer('one-shift', {
                 observe: {
-                    'shift.employees' : 'updateStyles'
+                    'shift.employees' : 'updateStylesTwice'
                 },
                 dragInfo: {},
                 minutesToHHMMString: function (minutes) {
@@ -147,17 +147,27 @@
                         this.style.height = this.calcMinutesOfNextDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
                         this.style.top = "0";
                     }
+
                 },
                 domReady: function () {
                     this.updateStyles();
+                },
+                attached: function () {
                     if (this.listOfInstances.indexOf(this) === -1) {
                         this.listOfInstances.push(this);
                     }
+                },
+                detached: function () {
+                    this.listOfInstances.splice(this.listOfInstances.indexOf(this), 1);
                 },
                 pxDayWidthChanged: function () {
                     this.listOfInstances.forEach( function (shift) {
                         shift.updateStyles();
                     });
+                },
+                updateStylesTwice: function () {
+                    this.updateStyles();
+                    this.updateStyles();
                 },
                 updateStyles: function() {
                     var pxWidth = (this.pxDayWidth - 1) / (this.part === "first" ? this.shift.numberOfShiftsWideForFirst : this.shift.numberOfShiftsWideForSecond), //parseFloat(getComputedStyle(this).width), //more accurate than offsetWidth (but includes overflowed elements = possible problem?)
@@ -165,7 +175,6 @@
                         width = pxWidth * 5,
                         height = pxHeight * 5,
                         minuteHeight = height / MINUTES_IN_A_DAY;
-
                     if (this.part === "first") {
                         this.style.width = (100 / DAYS_IN_A_WEEK / this.shift.numberOfShiftsWideForFirst) + "%"; //todo: fix
                         this.$.displayTime.style.fontSize = (pxWidth / (this.shift.numberOfShiftsWideForFirst === 1 ? 6 : 3)) + "px";
