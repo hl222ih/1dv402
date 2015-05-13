@@ -190,22 +190,26 @@
                 },
                 mouseOverShift: function(e) {
                     var self = this;
-                    if (this.dragInfo.draggedItem && this.dragInfo.draggedItem.id === "oneEmployee") {
-                        var list = this.listOfInstances.filter( function(instance) {
-                            return instance.shift === self.shift;
-                        });
-                        for (var i = 0; i < list.length; i++) {
-                            list[i].classList.add('dragEmployeeHover');
+                    if (!this.classList.contains('shiftData')) {
+                        if (this.dragInfo.draggedItem && this.dragInfo.draggedItem.id === "oneEmployee") {
+                            var list = this.listOfInstances.filter( function(instance) {
+                                return instance.shift === self.shift;
+                            });
+                            for (var i = 0; i < list.length; i++) {
+                                list[i].classList.add('dragEmployeeHover');
+                            }
                         }
                     }
                 },
                 mouseOutOfShift: function(e) {
                     var self = this;
-                    var list = this.listOfInstances.filter( function(instance) {
-                        return instance.shift === self.shift;
-                    });
-                    for (var i = 0; i < list.length; i++) {
-                        list[i].classList.remove('dragEmployeeHover');
+                    if (!this.classList.contains('shiftData')) {
+                        var list = this.listOfInstances.filter( function(instance) {
+                            return instance.shift === self.shift;
+                        });
+                        for (var i = 0; i < list.length; i++) {
+                            list[i].classList.remove('dragEmployeeHover');
+                        }
                     }
                 },
                 listOfInstances: []

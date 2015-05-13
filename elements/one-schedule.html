@@ -5,6 +5,7 @@
 <link rel="import" href="one-employee.html"/>
 <link rel="import" href="../bower_components/paper-button/paper-button.html"/>
 <link rel="import" href="../bower_components/core-splitter/core-splitter.html"/>
+<link rel="import" href="../bower_components/core-collapse/core-collapse.html"/>
 
 <polymer-element unresolved name="one-schedule" horizontal layout>
     <template>
@@ -32,10 +33,12 @@
             </div>
         </div>
         <core-splitter direction="left" allowOverflow="true"></core-splitter>
-        <div flex id="infoContainer" style="font-family: 'Trebuchet MS', Helvetica, sans-serif;">
-            <template repeat="{{employee in currentSchedule.employees}}">
-                {{employee.name}}: {{employee|calculateTotalTime}} minutes
-                <br/>
+        <div flex id="infoContainer" style="font-family: 'Trebuchet MS', Helvetica, sans-serif; overflow-y: auto;">
+            <template repeat="{{employee, index in currentSchedule.employees}}">
+                <div on-click="{{toggle}}" style="padding: 5px; border: 1px solid #dedede">{{employee.name}}</div>
+                <core-collapse>
+                    Total tid: {{ { employee:employee, updated:updated } |calculateTotalTime|minutesToHours}}
+                </core-collapse>
             </template>
         </div>
     </template>
@@ -44,6 +47,15 @@
         var NUMBER_OF_MINUTES_IN_A_DAY = 1440;
 
         Polymer('one-schedule', {
+            returnEmptyString: function (str) {
+                return "";
+            },
+            minutesToHours: function (minutes) {
+                return minutes/60;
+            },
+            toggle: function (event, detail, sender) {
+                sender.nextElementSibling.toggle();
+            },
             computed: {
             },
             updated: 0,
@@ -54,7 +66,8 @@
                 scheduleElement.offsetHeight;
                 scheduleElement.style.display = '';
             },
-            calculateTotalTime: function (employee) {
+            calculateTotalTime: function (employeeModel) {
+                var employee = employeeModel.employee;
                 var shifts = [];
                 var weekSchedules = [];
                 var minutes = 0;
@@ -410,8 +423,6 @@
 
                         //pxWidth: 60 //automatically calculated for now, might be needed?
 
-                        //numberOfShiftsWide: 2,
-
                         this.currentSchedule.weekSchedules[shift.week - 1].shifts.push(shift);
                         if (shift.endTime < shift.startTime) {
                             if (shift.dayOfWeek === 7) {
@@ -422,7 +433,6 @@
                                 }
                             }
                         }
-
                     }
                 }, this);
                 this.adjustShiftWidths();
@@ -631,7 +641,7 @@
             },
             moveEmployee: function(dragInfo) {
                 //if the target is a "oneShift"...
-                if (dragInfo.dropTarget && dragInfo.dropTarget.id === "oneShift") {
+                if (dragInfo.dropTarget && dragInfo.dropTarget.id === "oneShift" && !dragInfo.dropTarget.classList.contains("shiftData")) {
                     //if this "oneShift" does not already have the "employee"
                     if (dragInfo.dropTarget.shift.employees.indexOf(dragInfo.draggedItem.employee) === -1) {
                         //add the "employee" to the "oneShift")
@@ -703,8 +713,6 @@
                         //add the shift to the week it is dragged to. Make a copy to trigger a UI update.
                         var dropWeekSchedule = this.currentSchedule.weekSchedules[dropOneWeek.weekNumber - 1];
                         var draggedShiftClone = JSON.parse(JSON.stringify(draggedShift));
-                        draggedShiftClone.employees = draggedShift.employees;
-
                         dropWeekSchedule.shifts.push(draggedShiftClone);
 
                         //if the shift is dragged to a Sunday and the shift spans over two days, also add it to next week's shifts.
