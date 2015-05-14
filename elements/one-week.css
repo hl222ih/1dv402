@@ -71,3 +71,10 @@ div#weekDay {
     pointer-events: none;
 }
 
+@media print {
+    div#weekDay {
+        position: absolute;
+        background-color: inherit;
+        /* dynamically: width, height, left */
+    }
+}

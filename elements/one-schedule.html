@@ -6,6 +6,7 @@
 <link rel="import" href="../bower_components/paper-button/paper-button.html"/>
 <link rel="import" href="../bower_components/core-splitter/core-splitter.html"/>
 <link rel="import" href="../bower_components/core-collapse/core-collapse.html"/>
+<link rel="import" href="../bower_components/core-range/core-range.html"/>
 
 <polymer-element unresolved name="one-schedule" horizontal layout>
     <template>
@@ -35,9 +36,15 @@
         <core-splitter direction="left" allowOverflow="true"></core-splitter>
         <div flex id="infoContainer" style="font-family: 'Trebuchet MS', Helvetica, sans-serif; overflow-y: auto;">
             <template repeat="{{employee, index in currentSchedule.employees}}">
-                <div on-click="{{toggle}}" style="padding: 5px; border: 1px solid #dedede">{{employee.name}}</div>
-                <core-collapse>
-                    Total tid: {{ { employee:employee, updated:updated } |calculateTotalTime|minutesToHours}}
+                <core-range min="0" max="100" value="{{employee.percentagePlanned}}" ratio="50"></core-range>
+                <div class="progress-bar"  style="width: 50%;"></div>
+                <div on-click="{{toggle}}" style="padding: 1px; padding-left: 5px; border: 1px solid #dedede">
+                    {{employee.name}}
+                </div>
+                <core-collapse style="padding-left: 2px; font-size: 10px;">
+                    <div>Utlagda timmar: {{employee.hoursPlanned}} (av {{employee.totalHours}})</div>
+                    <div>Utlagd procent: {{employee.percentagePlanned}} % (av {{employee.employmentPercentage}} %)</div>
+                    <div>Antal utlagda pass: {{employee.numberOfShifts}} ( {{employee.hoursPerShift}} timmar / pass)</div>
                 </core-collapse>
             </template>
         </div>
@@ -45,13 +52,11 @@
     <script src="../bower_components/svg.js/dist/svg.js"></script>
     <script>
         var NUMBER_OF_MINUTES_IN_A_DAY = 1440;
+        var MINUTES_IN_AN_HOUR = 60;
 
         Polymer('one-schedule', {
             returnEmptyString: function (str) {
                 return "";
-            },
-            minutesToHours: function (minutes) {
-                return minutes/60;
             },
             toggle: function (event, detail, sender) {
                 sender.nextElementSibling.toggle();
@@ -65,13 +70,40 @@
                 scheduleElement.style.display = 'none';
                 scheduleElement.offsetHeight;
                 scheduleElement.style.display = '';
+                this.updateEmployees();
             },
-            calculateTotalTime: function (employeeModel) {
-                var employee = employeeModel.employee;
+            toTwoDecimals: function (num) {
+                return Math.round(num * 100) / 100; //at most 2 decimals
+            },
+            updateEmployees: function() {
+                //Better to update the employees' info data here than declaratively in html, since the expressions tend to be a bit obscure.
+                //
+                this.currentSchedule.employees.forEach( function(employee) {
+                    employee.totalHours = this.toTwoDecimals(this.getEmployeeTotalHours(employee));
+                    var hoursPlanned = this.getEmployeeHoursPlanned(employee);
+                    employee.hoursPlanned = this.toTwoDecimals(hoursPlanned)
+                    employee.percentagePlanned = this.toTwoDecimals(this.getEmployeePercentagePlanned(employee));
+                    employee.numberOfShifts = this.getEmployeeNumberOfShifts(employee);
+                    employee.hoursPerShift = employee.numberOfShifts > 0 ? this.toTwoDecimals(hoursPlanned/employee.numberOfShifts) : "-";
+                }, this);
+            },
+            getEmployeeTotalHours: function(employee) {
+                return employee.weekWorkHours * employee.employmentPercentage / 100 * this.currentSchedule.numberOfWeeks;
+            },
+            getEmployeePercentagePlanned: function(employee) {
+                var totalHours = this.getEmployeeHoursPlanned(employee);
+                var numberOfWeeks = this.currentSchedule.numberOfWeeks;
+                var weekWorkHours = employee.weekWorkHours;
+                var employmentPercentage = employee.employmentPercentage;
+                var totalPercentage = totalHours / numberOfWeeks / weekWorkHours * 100;  //* employmentPercentage / 100
+                return totalPercentage;
+            },
+            getEmployeeHoursPlanned: function (employee) {
                 var shifts = [];
                 var weekSchedules = [];
                 var minutes = 0;
                 var filteredShifts = [];
+                var hours;
 
                 this.currentSchedule.weekSchedules.forEach( function (weekSchedule) {
                     shifts = shifts.concat(weekSchedule.shifts);
@@ -101,7 +133,39 @@
                     }
                 });
 
-                return minutes;
+                hours = minutes / MINUTES_IN_AN_HOUR;
+                return hours;
+            },
+            getEmployeeNumberOfShifts: function (employee) {
+                var shifts = [];
+                var weekSchedules = [];
+                var numShifts = 0; //number of shifts
+                var filteredShifts = [];
+
+                this.currentSchedule.weekSchedules.forEach( function (weekSchedule) {
+                    shifts = shifts.concat(weekSchedule.shifts);
+                });
+                filteredShifts = shifts.filter( function (shift) {
+                    var match = false;
+                    if (shift.employees) {
+                        shift.employees.forEach( function (emp) {
+                            if (!match) {
+                                match = emp.code === employee.code;
+                            }
+                        });
+                    }
+                    return match;
+                });
+                //make sure to not count a shift twice, when it spans over multiple weeks.
+                var seen = [];
+                filteredShifts.forEach( function (shift) {
+                    if (seen.indexOf(shift) === -1) {
+                        seen.push(shift);
+                        numShifts++;
+                    }
+                });
+
+                return numShifts;
             },
             pxWeekWidth: 420,
             currentSchedule: {
@@ -270,97 +334,129 @@
                     code: "AA",
                     name: "Agneta",
                     color: "black",
-                    bgColor: "#ffbaba"
+                    bgColor: "#ffbaba",
+                    weekWorkHours: 37,
+                    employmentPercentage: 80
                 },
                 {
                     code: "BB",
                     name: "Bertil",
                     color: "black",
-                    bgColor: "#fff3ba"
+                    bgColor: "#fff3ba",
+                    weekWorkHours: 37,
+                    employmentPercentage: 100
                 },
                 {
                     code: "CC",
                     name: "Cecilia",
                     color: "black",
-                    bgColor: "#baffba"
+                    bgColor: "#baffba",
+                    weekWorkHours: 37,
+                    employmentPercentage: 70
                 },
                 {
                     code: "DD",
                     name: "Denise",
                     color: "black",
-                    bgColor: "#d1c2ff"
+                    bgColor: "#d1c2ff",
+                    weekWorkHours: 37,
+                    employmentPercentage: 100
                 },
                 {
                     code: "EE",
                     name: "Erik",
                     color: "black",
-                    bgColor: "#ffe2ba"
+                    bgColor: "#ffe2ba",
+                    weekWorkHours: 37,
+                    employmentPercentage: 75
                 },
                 {
                     code: "FF",
                     name: "Felicia",
                     color: "black",
-                    bgColor: "#f3ffba"
+                    bgColor: "#f3ffba",
+                    weekWorkHours: 37,
+                    employmentPercentage: 100
                 },
                 {
                     code: "GG",
                     name: "Gustav",
                     color: "black",
-                    bgColor: "#bde2fd"
+                    bgColor: "#bde2fd",
+                    weekWorkHours: 37,
+                    employmentPercentage: 50
                 },
                 {
                     code: "HH",
                     name: "Hanna",
                     color: "black",
-                    bgColor: "#fdb9fd"
+                    bgColor: "#fdb9fd",
+                    weekWorkHours: 37,
+                    employmentPercentage: 60
                 },
                 {
                     code: "II",
                     name: "Ivar",
                     color: "black",
-                    bgColor: "#ffd4ba"
+                    bgColor: "#ffd4ba",
+                    weekWorkHours: 37,
+                    employmentPercentage: 100
                 },
                 {
                     code: "JJ",
                     name: "Johan",
                     color: "black",
-                    bgColor: "#fffcba"
+                    bgColor: "#fffcba",
+                    weekWorkHours: 37,
+                    employmentPercentage: 90
                 },
                 {
                     code: "KK",
                     name: "Kristina",
                     color: "black",
-                    bgColor: "#b9fdec"
+                    bgColor: "#b9fdec",
+                    weekWorkHours: 37,
+                    employmentPercentage: 100
                 },
                 {
                     code: "LL",
                     name: "Linda",
                     color: "black",
-                    bgColor: "#dfbefe"
+                    bgColor: "#dfbefe",
+                    weekWorkHours: 37,
+                    employmentPercentage: 40
                 },
                 {
                     code: "MM",
                     name: "Maria",
                     color: "black",
-                    bgColor: "#ffebba"
+                    bgColor: "#ffebba",
+                    weekWorkHours: 37,
+                    employmentPercentage: 75
                 },
                 {
                     code: "NN",
                     name: "Niclas",
                     color: "black",
-                    bgColor: "#e1ffba"
+                    bgColor: "#e1ffba",
+                    weekWorkHours: 37,
+                    employmentPercentage: 80
                 },
                 {
                     code: "OO",
                     name: "Oscar",
                     color: "black",
-                    bgColor: "#c2cbfe"
+                    bgColor: "#c2cbfe",
+                    weekWorkHours: 37,
+                    employmentPercentage: 90
                 },
                 {
                     code: "PP",
                     name: "Pernilla",
                     color: "black",
-                    bgColor: "#febad7"
+                    bgColor: "#febad7",
+                    weekWorkHours: 37,
+                    employmentPercentage: 100
                 }
             ],
             //employeeFromCode: function(employeeCode) {
@@ -376,6 +472,9 @@
             },
             ready: function () {
                 this.populateCurrentSchedule("Schema 1"); //pick first for now
+            },
+            domReady: function() {
+                this.updated++;
             },
             populateCurrentSchedule: function(scheduleName) {
                 var scheduleData = this.schedules.filter(function (schedule) {
