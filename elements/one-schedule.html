@@ -16,30 +16,30 @@
                 <div id="scheduleSelectContainer" class="selectContainer">
                 </div>
                 <div id="employeeSelectContainer" class="selectContainer">
-                    <template repeat="{{employee in currentSchedule.employees}}">
+                    <template repeat="{{employee in schedule.employees}}">
                         <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
                     </template>
                 </div>
                 <div id="shiftSelectContainer" class="selectContainer">
-                    <template repeat="{{shift in currentSchedule.shiftDefinitions}}">
+                    <template repeat="{{shift in schedule.shiftDefinitions}}">
                         <one-shift id="oneShift" class="shiftData" shift="{{shift}}" dragInfo="{{dragInfo}}" style="background-color: #eee"></one-shift>
                     </template>
                 </div>
             </div>
             <div flex id="scheduleContainer" style="margin: 1%; width: 98%;">
                 <paper-slider id="paperSlider" min="200" max="900" value="[[pxWeekWidth]]" immediateValue="{{pxWeekWidth}}"></paper-slider>
-                <template repeat="{{weekSchedule, index in currentSchedule.weekSchedules}}">
-                    <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 210 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{currentSchedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
+                <template repeat="{{weekSchedule, index in schedule.weekSchedules}}">
+                    <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 250 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{schedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
                 </template>
             </div>
         </div>
         <core-splitter direction="left" allowOverflow="true"></core-splitter>
         <div flex id="infoContainer" style="font-family: 'Trebuchet MS', Helvetica, sans-serif; overflow-y: auto;">
-            <template repeat="{{employee, index in currentSchedule.employees}}">
+            <template repeat="{{employee, index in schedule.employees}}">
                 <core-range min="0" max="100" value="{{employee.percentagePlanned}}" ratio="50"></core-range>
                 <div class="progress-bar"  style="width: 50%;"></div>
                 <div on-click="{{toggle}}" style="padding: 1px; padding-left: 5px; border: 1px solid #dedede">
-                    {{employee.name}}
+                    {{employee.name}} ({{employee.code}}) (No o s: {{schedule.numberOfShifts}})
                 </div>
                 <core-collapse style="padding-left: 2px; font-size: 10px;">
                     <div>Utlagda timmar: {{employee.hoursPlanned}} (av {{employee.totalHours}})</div>
@@ -51,61 +51,167 @@
     </template>
     <script src="../bower_components/svg.js/dist/svg.js"></script>
     <script>
-        var NUMBER_OF_MINUTES_IN_A_DAY = 1440;
-        var MINUTES_IN_AN_HOUR = 60;
-
-        Polymer('one-schedule', {
-            returnEmptyString: function (str) {
-                return "";
-            },
-            toggle: function (event, detail, sender) {
-                sender.nextElementSibling.toggle();
-            },
-            computed: {
-            },
-            updated: 0,
-            updatedChanged: function() {
-                //for some reason core-splitter is preventing summary element to repaint. This will force a repaint update
-                var scheduleElement = document.getElementsByTagName('one-schedule')[0];
-                scheduleElement.style.display = 'none';
-                scheduleElement.offsetHeight;
-                scheduleElement.style.display = '';
-                this.updateEmployees();
-            },
-            toTwoDecimals: function (num) {
+        (function() {
+            'use strict';
+            var NUMBER_OF_MINUTES_IN_A_DAY = 1440;
+            var MINUTES_IN_AN_HOUR = 60;
+            var toTwoDecimals = function(num) {
                 return Math.round(num * 100) / 100; //at most 2 decimals
-            },
-            updateEmployees: function() {
-                //Better to update the employees' info data here than declaratively in html, since the expressions tend to be a bit obscure.
-                //
-                this.currentSchedule.employees.forEach( function(employee) {
-                    employee.totalHours = this.toTwoDecimals(this.getEmployeeTotalHours(employee));
-                    var hoursPlanned = this.getEmployeeHoursPlanned(employee);
-                    employee.hoursPlanned = this.toTwoDecimals(hoursPlanned)
-                    employee.percentagePlanned = this.toTwoDecimals(this.getEmployeePercentagePlanned(employee));
-                    employee.numberOfShifts = this.getEmployeeNumberOfShifts(employee);
-                    employee.hoursPerShift = employee.numberOfShifts > 0 ? this.toTwoDecimals(hoursPlanned/employee.numberOfShifts) : "-";
+            };
+
+            function Employee(employeeData) {
+                this.code = employeeData.code || "";
+                this.name = employeeData.name || "";
+                this.color = employeeData.color || "black";
+                this.bgColor = employeeData.bgColor || "white";
+                this.weekWorkHours = employeeData.weekWorkHours || 37; //veckoarbetstidsmått, default 37 timmar per vecka (vid heltidsarbete)
+                this.employmentPercentage = employeeData.employmentPercentage || 100; //tjänstgöringsgrad, default 100% (heltid)
+            }
+
+            function Schedule(scheduleData) {
+                scheduleData = scheduleData || {};
+                this.name = scheduleData.name || "";
+                this.numberOfWeeks = scheduleData.numberOfWeeks || 0;
+                this.weekSchedules = [];
+                this.shiftDefinitions = [];
+                this.employeesCodes = scheduleData.employeesCodes || [];
+                this.employees = getEmployeesFromCodes(scheduleData.employeesCodes);
+
+                for (var i = 0; i < this.numberOfWeeks; i++) {
+                    this.weekSchedules.push({shifts: []});
+                }
+
+                scheduleData.shiftDefinitions = scheduleData.shiftDefinitions || [];
+                scheduleData.shiftDefinitions.forEach(function (shiftDefinitionData) {
+                    this.shiftDefinitions.push(new ShiftDefinition(shiftDefinitionData));
+                },this);
+
+                scheduleData.shifts = scheduleData.shifts || [];
+                scheduleData.shifts.forEach(function (shiftData) {
+                    var shiftDefinition = this.shiftDefinitions.filter(function (shiftDefinition) {
+                        return shiftDefinition.code === shiftData.shiftCode;
+                    })[0];
+                    for (var i = 0; i < shiftData.weeks.length; i++) {
+                        shiftData.week = shiftData.weeks[i];
+                        shiftData.shiftDefinition = shiftDefinition;
+
+                        var shift = new Shift(shiftData);
+
+                        this.weekSchedules[shift.week - 1].shifts.push(shift);
+                        if (shift.endTime < shift.startTime) {
+                            if (shift.dayOfWeek === 7) {
+                                if (shift.week !== this.numberOfWeeks) {
+                                    this.weekSchedules[shift.week].shifts.push(shift);
+                                } else {
+                                    this.weekSchedules[0].shifts.push(shift);
+                                }
+                            }
+                        }
+                    }
                 }, this);
-            },
-            getEmployeeTotalHours: function(employee) {
-                return employee.weekWorkHours * employee.employmentPercentage / 100 * this.currentSchedule.numberOfWeeks;
-            },
-            getEmployeePercentagePlanned: function(employee) {
+
+            }
+
+            function Shift(shiftData) {
+                shiftData = shiftData || {};
+                this.code = shiftData.shiftCode || "";
+                this.employees = getEmployeesFromCodes(shiftData.employeeCodes); //todo: change to employeesCodes
+                this.workPlace = workplacesData.filter(function (workplaceData) {
+                    return workplaceData.code === shiftData.workplaceCode;
+                })[0] || {};
+                this.weeks = shiftData.weeks || [1];
+                this.week = shiftData.week || this.weeks[0];
+                this.startTime = shiftData.shiftDefinition ? shiftData.shiftDefinition.startTime : 0 || 0;
+                this.endTime = shiftData.shiftDefinition ? shiftData.shiftDefinition.endTime : 0 || 0 ;
+                this.dayOfWeek = shiftData.dayOfWeek || 1;
+                this.numberOfShiftsWideForFirst = 1; //not settable on creation (1 means full width, 3 means 1/3 of full width)
+                this.numberOfShiftsWideForSecond = 1; //not settable on creation (if shift spans over two days, this is the part for day 2)
+                this.positionForFirst = 1; //not settable on creation (if width is 3, 1 means to the left, 2 in the middle, 3 to the right of available width)
+                this.positionForSecond = 1; //not settable on creation (if shift spans over two days, this is the position for the part of the shift on day 2)
+            }
+
+            function ShiftDefinition(shiftDefinitionData) {
+                shiftDefinitionData = shiftDefinitionData || {};
+                this.code = shiftDefinitionData.code || "";
+                this.workPlace = workplacesData.filter(function (workplaceData) {
+                    return workplaceData.code === shiftDefinitionData.workplaceCode;
+                })[0] || {};
+                this.startTime = shiftDefinitionData.startTime || 0;
+                this.endTime = shiftDefinitionData.endTime || 0;
+                this.week = undefined; //is set when dropped on a weekDay
+                this.dayOfWeek = undefined; //is set when dropped on a weekDay
+            }
+
+            Schedule.prototype.updateShifts = function() {
+                this.numberOfShifts = this.getAllShifts().length;
+            };
+
+            Schedule.prototype.updateEmployees = function() {
+                this.employees.forEach( function(employee) {
+                    employee.totalHours = toTwoDecimals(this.getEmployeeTotalHours(employee));
+                    employee.percentagePlanned = toTwoDecimals(this.getEmployeePercentagePlanned(employee));
+                    var hoursPlanned = this.getEmployeeHoursPlanned(employee);
+                    employee.hoursPlanned = toTwoDecimals(hoursPlanned);
+                    employee.numberOfShifts = this.getEmployeeNumberOfShifts(employee);
+                    employee.hoursPerShift = employee.numberOfShifts > 0 ? toTwoDecimals(hoursPlanned/employee.numberOfShifts) : "-";
+                }, this);
+            };
+
+            Schedule.prototype.getEmployeeTotalHours = function(employee) {
+                return employee.weekWorkHours * employee.employmentPercentage / 100 * this.numberOfWeeks;
+            };
+
+            Schedule.prototype.getEmployeePercentagePlanned = function(employee) {
                 var totalHours = this.getEmployeeHoursPlanned(employee);
-                var numberOfWeeks = this.currentSchedule.numberOfWeeks;
+                var numberOfWeeks = this.numberOfWeeks;
                 var weekWorkHours = employee.weekWorkHours;
-                var employmentPercentage = employee.employmentPercentage;
-                var totalPercentage = totalHours / numberOfWeeks / weekWorkHours * 100;  //* employmentPercentage / 100
+                var totalPercentage = totalHours / numberOfWeeks / weekWorkHours * 100;
                 return totalPercentage;
-            },
-            getEmployeeHoursPlanned: function (employee) {
+            };
+
+            Schedule.prototype.getEmployeeHoursPlanned = function (employee) {
                 var shifts = [];
                 var weekSchedules = [];
                 var minutes = 0;
-                var filteredShifts = [];
                 var hours;
 
-                this.currentSchedule.weekSchedules.forEach( function (weekSchedule) {
+                shifts = this.getEmployeeShifts(employee);
+
+                //make sure to not count a shift twice, when it spans over multiple weeks.
+                var seen = [];
+                shifts.forEach( function (shift) {
+                    if (seen.indexOf(shift) === -1) {
+                        seen.push(shift);
+                        if (shift.endTime > shift.startTime) {
+                            minutes = minutes + shift.endTime - shift.startTime;
+                        } else {
+                            minutes = minutes + shift.endTime + NUMBER_OF_MINUTES_IN_A_DAY - shift.startTime;
+                        }
+                    }
+                });
+
+                hours = minutes / MINUTES_IN_AN_HOUR;
+                return hours;
+            };
+
+            Schedule.prototype.getAllShifts = function() {
+                var shifts = [];
+
+                this.weekSchedules.forEach( function (weekSchedule) {
+                    weekSchedule.shifts.forEach( function (shift) {
+                        if (shifts.indexOf(shift) === -1) {
+                            shifts = shifts.concat(weekSchedule.shifts);
+                        }
+                    });
+                });
+                return shifts;
+            };
+
+            Schedule.prototype.getEmployeeShifts = function (employee) {
+                var shifts = [];
+                var filteredShifts = [];
+
+                this.weekSchedules.forEach( function (weekSchedule) {
                     shifts = shifts.concat(weekSchedule.shifts);
                 });
                 filteredShifts = shifts.filter( function (shift) {
@@ -120,45 +226,19 @@
                     }
                     return match;
                 });
-                //make sure to not count a shift twice, when it spans over multiple weeks.
-                var seen = [];
-                filteredShifts.forEach( function (shift) {
-                    if (seen.indexOf(shift) === -1) {
-                        seen.push(shift);
-                        if (shift.endTime > shift.startTime) {
-                            minutes = minutes + shift.endTime - shift.startTime;
-                        } else {
-                            minutes = minutes + shift.endTime + NUMBER_OF_MINUTES_IN_A_DAY - shift.startTime;
-                        }
-                    }
-                });
 
-                hours = minutes / MINUTES_IN_AN_HOUR;
-                return hours;
-            },
-            getEmployeeNumberOfShifts: function (employee) {
+                return filteredShifts;
+            };
+
+            Schedule.prototype.getEmployeeNumberOfShifts = function(employee) {
                 var shifts = [];
                 var weekSchedules = [];
                 var numShifts = 0; //number of shifts
-                var filteredShifts = [];
 
-                this.currentSchedule.weekSchedules.forEach( function (weekSchedule) {
-                    shifts = shifts.concat(weekSchedule.shifts);
-                });
-                filteredShifts = shifts.filter( function (shift) {
-                    var match = false;
-                    if (shift.employees) {
-                        shift.employees.forEach( function (emp) {
-                            if (!match) {
-                                match = emp.code === employee.code;
-                            }
-                        });
-                    }
-                    return match;
-                });
+                shifts = this.getEmployeeShifts(employee);
                 //make sure to not count a shift twice, when it spans over multiple weeks.
                 var seen = [];
-                filteredShifts.forEach( function (shift) {
+                shifts.forEach( function (shift) {
                     if (seen.indexOf(shift) === -1) {
                         seen.push(shift);
                         numShifts++;
@@ -166,170 +246,279 @@
                 });
 
                 return numShifts;
-            },
-            pxWeekWidth: 420,
-            currentSchedule: {
-                name: "",
-                weekSchedules: [],
-                shiftDefinitions: [],
-                employees: []
-            },
-            schedules: [
-                {
-                    name: "Schema 1",
-                    numberOfWeeks: 4,
-                    employeeCodes: ["AA", "BB", "CC", "DD", "EE", "FF", "GG", "HH", "II", "JJ", "KK", "LL", "MM", "NN", "OO", "PP"],
-                    shiftDefinitions: [
-                        {
-                            code: "A1", //07:00-16:00
-                            startTime: 420,
-                            endTime: 960
-                        },
-                        {
-                            code: "A2",
-                            startTime: 420,
-                            endTime: 930
-                        },
-                        {
-                            code: "C1", //10:30-21:15
-                            startTime: 630,
-                            endTime: 1275
-                        },
-                        {
-                            code: "C2", //11-21
-                            startTime: 660,
-                            endTime: 1275
-                        },
-                        {
-                            code: "N", //21:00-07:15
-                            startTime: 1260,
-                            endTime: 435
-                        },
-                        {
-                            code: "Q1", //06:00-09:20
-                            startTime: 360,
-                            endTime: 560
-                        }
-                    ],
-                    shifts: [
-                        {
-                            employeeCodes: ["AA"],
-                            shiftCode: "A1",
-                            workplaceCode: "WP1",
-                            weeks: [1],
-                            dayOfWeek: 1
-                        },
-                        {
-                            employeeCodes: ["AA", "BB"],
-                            shiftCode: "C1",
-                            workplaceCode: "WP2",
-                            weeks: [1,2],
-                            dayOfWeek: 1
-                        },
-                        {
-                            employeeCodes: [],
-                            shiftCode: "A1",
-                            workplaceCode: "WP1",
-                            weeks: [1],
-                            dayOfWeek: 5
-                        },
-                        {
-                            employeeCodes: ["DD"],
-                            shiftCode: "N",
-                            workPlaceCode: "WP1",
-                            weeks: [2],
-                            dayOfWeek: 4
-                        },
-                        {
-                            employeeCodes: ["DD"],
-                            shiftCode: "N",
-                            workPlaceCode: "WP1",
-                            weeks: [4],
-                            dayOfWeek: 7
-                        },
-                        {
-                            employeeCodes: ["PP"],
-                            shiftCode: "Q1",
-                            workPlaceCode: "WP1",
-                            weeks: [1],
-                            dayOfWeek: 1
-                        },
-                        {
-                            employeeCodes: ["EE"],
-                            shiftCode: "C2",
-                            workPlaceCode: "WP1",
-                            weeks: [1],
-                            dayOfWeek: 1
-                        },
-                        {
-                            employeeCodes: ["EE"],
-                            shiftCode: "N",
-                            workPlaceCode: "WP1",
-                            weeks: [1],
-                            dayOfWeek: 1
-                        },
-                        {
-                            employeeCodes: ["EE"],
-                            shiftCode: "N",
-                            workPlaceCode: "WP1",
-                            weeks: [1],
-                            dayOfWeek: 1
-                        },
-                        {
-                            employeeCodes: ["EE"],
-                            shiftCode: "N",
-                            workPlaceCode: "WP1",
-                            weeks: [3],
-                            dayOfWeek: 1
-                        },
-                        {
-                            employeeCodes: ["EE"],
-                            shiftCode: "A1",
-                            workPlaceCode: "WP1",
-                            weeks: [3],
-                            dayOfWeek: 2
-                        },
-                        {
-                            employeeCodes: ["EE"],
-                            shiftCode: "C2",
-                            workPlaceCode: "WP1",
-                            weeks: [3],
-                            dayOfWeek: 2
-                        },
-                        {
-                            employeeCodes: ["EE"],
-                            shiftCode: "N",
-                            workPlaceCode: "WP1",
-                            weeks: [3],
-                            dayOfWeek: 2
-                        }
-                    ]
-                },
-                {
-                    name: "Schema 2",
-                    numberOfWeeks: 1,
-                    employeeCodes: ["AA", "BB"],
-                    shiftDefinitions: [
-                        {
-                            code: "A1",
-                            startTime: 420,
-                            endTime: 960
-                        }
-                    ]
+            };
+
+            ShiftDefinition.prototype.createShift = function() {
+                var shift = new Shift();
+                shift.startTime = this.startTime;
+                shift.endTime = this.endTime;
+                shift.code = this.code;
+                shift.workPlace = this.workPlace;
+                shift.week = this.week;
+                shift.dayOfWeek = this.dayOfWeek;
+                return shift;
+            };
+
+            Shift.prototype.getAdjustedStartTime = function (dayOfWeek) {
+                var startTime;
+
+                if (this.startTime < this.endTime) {
+                    //shift within same day
+                    startTime = this.startTime;
+                } else {
+                    //shift spans over two days
+                    if (this.dayOfWeek === dayOfWeek) {
+                        //use first part of shift (i.e. [22:00]-00:00)
+                        startTime = this.startTime;
+                    } else {
+                        //use second part of shift (i.e. [00:00]-06:00)
+                        startTime = 0;
+                    }
                 }
-            ],
-            weekSchedule: {},
-            workplaces: [
-                {
-                    code: "WP1",
-                    description: "workplace 1"
-                },
-                {
-                    code: "WP2",
-                    description: "workplace 2"
+
+                return startTime;
+            };
+
+            Shift.prototype.getAdjustedEndTime = function (dayOfWeek) {
+                var endTime;
+
+                if (this.startTime < this.endTime) {
+                    //shift within same day
+                    endTime = this.endTime;
+                } else {
+                    //shift spans over two days
+                    if (this.dayOfWeek === dayOfWeek) {
+                        //use first time of shift (i.e. 22:00-[00:00])
+                        endTime = NUMBER_OF_MINUTES_IN_A_DAY;
+                    } else {
+                        //use second time of shift (i.e. 00:00-[06:00])
+                        endTime = this.endTime;
+                    }
                 }
-            ],
-            employees: [
+
+                return endTime;
+            };
+
+            Shift.prototype.isFirstOrSecondEvaluated = function(dayOfWeek) {
+                var result = "first";
+
+                if (this.startTime >= this.endTime && this.dayOfWeek !== dayOfWeek) {
+                    result = "second";
+                }
+
+                return result;
+            };
+
+            Shift.prototype.setPosition = function(position, dayOfWeek) {
+                if (this.isFirstOrSecondEvaluated(dayOfWeek) === "first") {
+                    this.positionForFirst = position;
+                } else {
+                    this.positionForSecond = position;
+                }
+
+            };
+
+            Shift.prototype.getPosition = function(dayOfWeek) {
+                if (this.isFirstOrSecondEvaluated(dayOfWeek) === "first") {
+                    return this.positionForFirst;
+                } else {
+                    return this.positionForSecond;
+                }
+            };
+
+            Shift.prototype.getWidth = function(dayOfWeek) {
+                if (this.isFirstOrSecondEvaluated(dayOfWeek) === "first") {
+                    return this.numberOfShiftsWideForFirst;
+                } else {
+                    return this.numberOfShiftsWideForSecond;
+                }
+            };
+
+            Shift.prototype.setWidth = function(width, addToPrevious, dayOfWeek) {
+                if (this.isFirstOrSecondEvaluated(dayOfWeek) === "first") {
+                    if (addToPrevious) {
+                        this.numberOfShiftsWideForFirst = this.numberOfShiftsWideForFirst + width;
+                    } else {
+                        this.numberOfShiftsWideForFirst = width;
+                    }
+                } else {
+                    if (addToPrevious) {
+                        this.numberOfShiftsWideForSecond = this.numberOfShiftsWideForSecond + width;
+                    } else {
+                        this.numberOfShiftsWideForSecond = width;
+                    }
+                }
+            };
+
+            Shift.prototype.clone = function() {
+                var clone = new Shift();
+
+                for (var i in this) {
+                    if(this.hasOwnProperty(i)) {
+                        clone[i] = this[i];
+                    }
+                }
+                return clone;
+            };
+
+            var getEmployeesFromCodes = function(codes) {
+                codes = codes || [];
+                var employees = [];
+                codes.forEach( function (code) {
+                    var employeeData = employeesData.filter( function (empData) {
+                        return empData.code === code;
+                    })[0];
+                    if (employeeData) {
+                        employees.push(new Employee(employeeData));
+                    }
+                });
+                return employees;
+            };
+            var schedulesData = [
+                        {
+                            name: "Schema 1",
+                            numberOfWeeks: 4,
+                            employeesCodes: ["AA", "BB", "CC", "DD", "EE", "FF", "GG", "HH", "II", "JJ", "KK", "LL", "MM", "NN", "OO", "PP"],
+                            shiftDefinitions: [
+                                {
+                                    code: "A1", //07:00-16:00
+                                    startTime: 420,
+                                    endTime: 960
+                                },
+                                {
+                                    code: "A2",
+                                    startTime: 420,
+                                    endTime: 930
+                                },
+                                {
+                                    code: "C1", //10:30-21:15
+                                    startTime: 630,
+                                    endTime: 1275
+                                },
+                                {
+                                    code: "C2", //11-21
+                                    startTime: 660,
+                                    endTime: 1275
+                                },
+                                {
+                                    code: "N", //21:00-07:15
+                                    startTime: 1260,
+                                    endTime: 435
+                                },
+                                {
+                                    code: "Q1", //06:00-09:20
+                                    startTime: 360,
+                                    endTime: 560
+                                }
+                            ],
+                            shifts: [
+                                {
+                                    employeeCodes: ["AA"],
+                                    shiftCode: "A1",
+                                    workplaceCode: "WP1",
+                                    weeks: [1],
+                                    dayOfWeek: 1
+                                },
+                                {
+                                    employeeCodes: ["AA", "BB"],
+                                    shiftCode: "C1",
+                                    workplaceCode: "WP2",
+                                    weeks: [1,2],
+                                    dayOfWeek: 1
+                                },
+                                {
+                                    employeeCodes: [],
+                                    shiftCode: "A1",
+                                    workplaceCode: "WP1",
+                                    weeks: [1],
+                                    dayOfWeek: 5
+                                },
+                                {
+                                    employeeCodes: ["DD"],
+                                    shiftCode: "N",
+                                    workPlaceCode: "WP1",
+                                    weeks: [2],
+                                    dayOfWeek: 4
+                                },
+                                {
+                                    employeeCodes: ["DD"],
+                                    shiftCode: "N",
+                                    workPlaceCode: "WP1",
+                                    weeks: [4],
+                                    dayOfWeek: 7
+                                },
+                                {
+                                    employeeCodes: ["PP"],
+                                    shiftCode: "Q1",
+                                    workPlaceCode: "WP1",
+                                    weeks: [1],
+                                    dayOfWeek: 1
+                                },
+                                {
+                                    employeeCodes: ["EE"],
+                                    shiftCode: "C2",
+                                    workPlaceCode: "WP1",
+                                    weeks: [1],
+                                    dayOfWeek: 1
+                                },
+                                {
+                                    employeeCodes: ["EE"],
+                                    shiftCode: "N",
+                                    workPlaceCode: "WP1",
+                                    weeks: [1],
+                                    dayOfWeek: 1
+                                },
+                                {
+                                    employeeCodes: ["EE"],
+                                    shiftCode: "N",
+                                    workPlaceCode: "WP1",
+                                    weeks: [1],
+                                    dayOfWeek: 1
+                                },
+                                {
+                                    employeeCodes: ["EE"],
+                                    shiftCode: "N",
+                                    workPlaceCode: "WP1",
+                                    weeks: [3],
+                                    dayOfWeek: 1
+                                },
+                                {
+                                    employeeCodes: ["EE"],
+                                    shiftCode: "A1",
+                                    workPlaceCode: "WP1",
+                                    weeks: [3],
+                                    dayOfWeek: 2
+                                },
+                                {
+                                    employeeCodes: ["EE"],
+                                    shiftCode: "C2",
+                                    workPlaceCode: "WP1",
+                                    weeks: [3],
+                                    dayOfWeek: 2
+                                },
+                                {
+                                    employeeCodes: ["EE"],
+                                    shiftCode: "N",
+                                    workPlaceCode: "WP1",
+                                    weeks: [3],
+                                    dayOfWeek: 2
+                                }
+                            ]
+                        },
+                        {
+                            name: "Schema 2",
+                            numberOfWeeks: 1,
+                            employeesCodes: ["AA", "BB"],
+                            shiftDefinitions: [
+                                {
+                                    code: "A1",
+                                    startTime: 420,
+                                    endTime: 960
+                                }
+                            ]
+                        }
+                    ];
+            var employeesData = [
                 {
                     code: "AA",
                     name: "Agneta",
@@ -458,392 +647,275 @@
                     weekWorkHours: 37,
                     employmentPercentage: 100
                 }
-            ],
-            //employeeFromCode: function(employeeCode) {
-            //    var employees = this.employees.filter( function (employee) {
-            //        return employee.code === employeeCode;
-            //    });
-            //    return employees.length > 0 ? employees[0] : {};
-            //},
-            employeesFromCodes: function(employeeCodes) {
-                return this.employees.filter( function (employee) {
-                    return employeeCodes.indexOf(employee.code) > -1;
-                });
-            },
-            ready: function () {
-                this.populateCurrentSchedule("Schema 1"); //pick first for now
-            },
-            domReady: function() {
-                this.updated++;
-            },
-            populateCurrentSchedule: function(scheduleName) {
-                var scheduleData = this.schedules.filter(function (schedule) {
-                    return schedule.name === scheduleName;
-                })[0];
-
-                if (scheduleData === null) return;
-
-                this.currentSchedule.shiftDefinitions = scheduleData.shiftDefinitions;
-                this.currentSchedule.shiftDefinitions.forEach( function (shiftDefinition) {
-                    shiftDefinition.employees = [];
-                });
-                this.currentSchedule.numberOfWeeks = scheduleData.numberOfWeeks;
-                this.currentSchedule.employees = this.employeesFromCodes(scheduleData.employeeCodes);
-
-                this.currentSchedule.name = scheduleData.name;
-                this.currentSchedule.weekSchedules = [];
-                for (var i = 0; i < scheduleData.numberOfWeeks; i++) {
-                    this.currentSchedule.weekSchedules.push({shifts: []});
+            ];
+            var workplacesData = [
+                {
+                    code: "WP1",
+                    description: "workplace 1"
+                },
+                {
+                    code: "WP2",
+                    description: "workplace 2"
                 }
+            ];
 
-                scheduleData.shifts.forEach(function (shiftData) {
-                    var shiftDefinition = scheduleData.shiftDefinitions.filter(function (shiftDefinition) {
-                        return shiftDefinition.code === shiftData.shiftCode;
+            Polymer('one-schedule', {
+                returnEmptyString: function (str) {
+                    return "";
+                },
+                toggle: function (event, detail, sender) {
+                    sender.nextElementSibling.toggle();
+                },
+                computed: {
+                },
+                updated: 0,
+                updatedChanged: function() {
+                    //for some reason core-splitter is preventing summary element to repaint. This will force a repaint update
+                    var scheduleElement = document.getElementsByTagName('one-schedule')[0];
+                    scheduleElement.style.display = 'none';
+                    scheduleElement.offsetHeight;
+                    scheduleElement.style.display = '';
+                    this.schedule.updateEmployees();
+                    this.schedule.updateShifts();
+                },
+                pxWeekWidth: 420,
+                schedule: {},
+                ready: function () {
+                    this.populateSchedule("Schema 1"); //pick first for now
+                },
+                domReady: function() {
+                    this.updated++;
+                },
+                populateSchedule: function(scheduleName) {
+                    var scheduleData = schedulesData.filter(function (schedule) {
+                        return schedule.name === scheduleName;
                     })[0];
-                    for (var i = 0; i < shiftData.weeks.length; i++) {
-                        var shift = {
-                            code: shiftData.shiftCode,
-                            //employee: this.employees.filter(function (employee) {
-                            //    return employee.code === shiftData.employeeCode;
-                            //})[0],
-                            employees: this.employeesFromCodes(shiftData.employeeCodes),
-                            workplace: this.workplaces.filter(function (workplace) {
-                                return workplace.code === shiftData.workplaceCode;
-                            })[0],
-                            week: shiftData.weeks[i],
-                            startTime: shiftDefinition ? shiftDefinition.startTime : 0,
-                            endTime: shiftDefinition ? shiftDefinition.endTime : 0,
-                            dayOfWeek: shiftData.dayOfWeek,
-                            numberOfShiftsWideForFirst: 1,
-                            numberOfShiftsWideForSecond: 1,
-                            positionForFirst: 1,
-                            positionForSecond: 1
-                        };
 
-                        //pxWidth: 60 //automatically calculated for now, might be needed?
+                    if (scheduleData === null) return;
 
-                        this.currentSchedule.weekSchedules[shift.week - 1].shifts.push(shift);
-                        if (shift.endTime < shift.startTime) {
-                            if (shift.dayOfWeek === 7) {
-                                if (shift.week !== this.currentSchedule.numberOfWeeks) {
-                                    this.currentSchedule.weekSchedules[shift.week].shifts.push(shift);
-                                } else {
-                                    this.currentSchedule.weekSchedules[0].shifts.push(shift);
-                                }
-                            }
-                        }
-                    }
-                }, this);
-                this.adjustShiftWidths();
-            },
-            adjustShiftWidths: function () {
-                var getAdjustedStartTime = function (shift, dayOfWeek) {
-                    var startTime;
+                    this.schedule = new Schedule(scheduleData);
 
-                    if (shift.startTime < shift.endTime) {
-                        //shift within same day
-                        startTime = shift.startTime;
-                    } else {
-                        //shift spans over two days
-                        if (shift.dayOfWeek === dayOfWeek) {
-                            //use first part of shift (i.e. [22:00]-00:00)
-                            startTime = shift.startTime;
-                        } else {
-                            //use second part of shift (i.e. [00:00]-06:00)
-                            startTime = 0;
-                        }
-                    }
-
-                    return startTime;
-                };
-
-                var getAdjustedEndTime = function (shift, dayOfWeek) {
-                    var endTime;
-
-                    if (shift.startTime < shift.endTime) {
-                        //shift within same day
-                        endTime = shift.endTime;
-                    } else {
-                        //shift spans over two days
-                        if (shift.dayOfWeek === dayOfWeek) {
-                            //use first time of shift (i.e. 22:00-[00:00])
-                            endTime = NUMBER_OF_MINUTES_IN_A_DAY;
-                        } else {
-                            //use second time of shift (i.e. 00:00-[06:00])
-                            endTime = shift.endTime;
-                        }
-                    }
-
-                    return endTime;
-                };
-
-                var isFirstOrSecondEvaluated = function (shift, dayOfWeek) {
-                    var result;
-
-                    if (shift.startTime < shift.endTime) {
-                        result = "first";
-                    } else {
-                        if (shift.dayOfWeek === dayOfWeek) {
-                            result = "first";
-                        } else {
-                            result = "second";
-                        }
-                    }
-
-                    return result;
-                };
-
-                for (var currentWeekIndex = 0; currentWeekIndex < this.currentSchedule.weekSchedules.length; currentWeekIndex++) {
-                    for (var dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
-                        var currentShifts = this.currentSchedule.weekSchedules[currentWeekIndex].shifts.filter( function(shift) {
-                            return ((shift.week === currentWeekIndex + 1 && shift.dayOfWeek === dayOfWeek && isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") ||
-                            (shift.week === currentWeekIndex + 1 && shift.dayOfWeek === dayOfWeek - 1 && isFirstOrSecondEvaluated(shift, dayOfWeek) === "second") ||
-                            (shift.week !== currentWeekIndex + 1 && shift.dayOfWeek === 7 && dayOfWeek === 1 && isFirstOrSecondEvaluated(shift, dayOfWeek) === "second"));
-                        });
-
-                        currentShifts = currentShifts.sort(function(a,b) {
-                            // if shift spans over two days, and shift's dayOfWeek is not equal to current day's dayOfWeek, set startTime to 0.
-                            // if shift spans over two days, and shift's dayOfWeek is equal to current day's dayOfWeek, set endTime to 1440.
-                            // sort on 1) startTime, ascending, 2) endTime, ascending
-                            var result = 0;
-                            var aStartTime = getAdjustedStartTime(a, dayOfWeek);
-                            var aEndTime = getAdjustedEndTime(a, dayOfWeek);
-                            var bStartTime = getAdjustedStartTime(b, dayOfWeek);
-                            var bEndTime = getAdjustedEndTime(b, dayOfWeek);
-                            if (aStartTime !== bStartTime) {
-                                result = aStartTime - bStartTime;
-                            } else {
-                                result = aEndTime - bEndTime;
-                            }
-                            return result;
-                        });
-
-                        var setShiftPosition = function(shift, position) {
-                            if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
-                                shift.positionForFirst = position;
-                            } else {
-                                shift.positionForSecond = position;
-                            }
-                        };
-                        var getShiftPosition = function(shift) {
-                            if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
-                                return shift.positionForFirst;
-                            } else {
-                                return shift.positionForSecond;
-                            }
-                        };
-                        var setShiftWidth = function(shift, width, addToPrevious) {
-                            if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
-                                if (addToPrevious) {
-                                    shift.numberOfShiftsWideForFirst = shift.numberOfShiftsWideForFirst + width;
-                                } else {
-                                    shift.numberOfShiftsWideForFirst = width;
-                                }
-                            } else {
-                                if (addToPrevious) {
-                                    shift.numberOfShiftsWideForSecond = shift.numberOfShiftsWideForSecond + width;
-                                } else {
-                                    shift.numberOfShiftsWideForSecond = width;
-                                }
-                            }
-                        };
-                        var getShiftWidth = function(shift) {
-                            if (isFirstOrSecondEvaluated(shift, dayOfWeek) === "first") {
-                                return shift.numberOfShiftsWideForFirst;
-                            } else {
-                                return shift.numberOfShiftsWideForSecond;
-                            }
-                        };
-
-                        var currentShiftIndex;
-                        for (currentShiftIndex = 0; currentShiftIndex < currentShifts.length; currentShiftIndex++) {
-                            var currentShift = currentShifts[currentShiftIndex];
-                            var currentStartTime = getAdjustedStartTime(currentShift, dayOfWeek);
-                            var currentEndTime = getAdjustedEndTime(currentShift, dayOfWeek);
-
-                            var timeCollidingShifts = currentShifts.filter( function(shift) {
-                                if (shift === currentShift) return true;
-                                var otherStartTime = getAdjustedStartTime(shift, dayOfWeek);
-                                var otherEndTime = getAdjustedEndTime(shift, dayOfWeek);
-                                var isColliding =  ((otherStartTime <= currentStartTime && otherEndTime > currentStartTime) || (otherStartTime > currentStartTime && otherStartTime < currentEndTime));
-                                var isLeftColliding = (isColliding && currentShifts.indexOf(currentShift) > currentShifts.indexOf(shift));
-                                return isLeftColliding;
+                    this.adjustShiftWidths();
+                },
+                adjustShiftWidths: function () {
+                    for (var currentWeekIndex = 0; currentWeekIndex < this.schedule.weekSchedules.length; currentWeekIndex++) {
+                        for (var dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
+                            var currentShifts = this.schedule.weekSchedules[currentWeekIndex].shifts.filter( function(shift) {
+                                return ((shift.week === currentWeekIndex + 1 && shift.dayOfWeek === dayOfWeek && shift.isFirstOrSecondEvaluated(dayOfWeek) === "first") ||
+                                (shift.week === currentWeekIndex + 1 && shift.dayOfWeek === dayOfWeek - 1 && shift.isFirstOrSecondEvaluated(dayOfWeek) === "second") ||
+                                (shift.week !== currentWeekIndex + 1 && shift.dayOfWeek === 7 && dayOfWeek === 1 && shift.isFirstOrSecondEvaluated(dayOfWeek) === "second"));
                             });
 
-                            setShiftWidth(currentShift, timeCollidingShifts.length, false);
-                            timeCollidingShifts.forEach( function (shift) {
-                                if (getShiftWidth(shift) < timeCollidingShifts.length) {
-                                    setShiftWidth(shift, 1, true);
+                            currentShifts = currentShifts.sort(function(a,b) {
+                                // if shift spans over two days, and shift's dayOfWeek is not equal to current day's dayOfWeek, set startTime to 0.
+                                // if shift spans over two days, and shift's dayOfWeek is equal to current day's dayOfWeek, set endTime to 1440.
+                                // sort on 1) startTime, ascending, 2) endTime, ascending
+                                var result = 0;
+                                var aStartTime = a.getAdjustedStartTime(dayOfWeek);
+                                var aEndTime = a.getAdjustedEndTime(dayOfWeek);
+                                var bStartTime = b.getAdjustedStartTime(dayOfWeek);
+                                var bEndTime = b.getAdjustedEndTime(dayOfWeek);
+                                if (aStartTime !== bStartTime) {
+                                    result = aStartTime - bStartTime;
+                                } else {
+                                    result = aEndTime - bEndTime;
                                 }
+                                return result;
                             });
 
-                            var spaceFound = false;
-                            var shiftPosition;
-                            var currentShiftWidth = getShiftWidth(currentShift);
-                            var shiftWidth = currentShiftWidth;
-                            var currentShiftPosition = getShiftPosition(currentShift);
-                            while (!spaceFound && shiftWidth < 10) { //10 to prevent an infinite loop if a bug is encountered
-                                for (shiftPosition = 1; shiftPosition <= shiftWidth; shiftPosition++) {
-                                    var spaceCollidingShifts = timeCollidingShifts.filter( function (shift) {
-                                        if (shift === currentShift) return false;
-                                        var otherShiftPosition = getShiftPosition(shift);
-                                        var isColliding = (otherShiftPosition === shiftPosition && currentShifts.indexOf(currentShift) > currentShifts.indexOf(shift));
-                                        if (isColliding) {
-                                            return true;
-                                        } else {
-                                            return false;
-                                        }
-                                    });
-                                    if (spaceCollidingShifts.length === 0) {
-                                        spaceFound = true;
-                                        currentShiftPosition = shiftPosition;
-                                        break;
-                                    }
-                                }
-                                if (shiftWidth === currentShiftPosition && !spaceFound) {
-                                    shiftWidth = shiftPosition + 1;
-                                }
-                            }
-                            if (currentShiftPosition > shiftWidth) {
-                                shiftWidth = currentShiftPosition;
-                            }
-                            setShiftWidth(currentShift, shiftWidth, false);
-                            setShiftPosition(currentShift, currentShiftPosition);
-                        }
-                    }
-                }
-            },
-            dragInfo: {},
-            dragInfoChanged: function(oldValue, newValue) {
-                if (Object.keys(this.dragInfo).length === 0) { //check if this.dragInfo is an empty object (no object is dragged -> cursor should be visible)
-                    this.style.cursor = "default";
-                    this.$.paperSlider.style.cursor = "default";
-                } else {
-                    this.style.cursor = "none";
-                    this.$.paperSlider.style.cursor = "none";
-                }
 
-                if (newValue && newValue.event && newValue.event.type === "track") {
-                    if (newValue.draggedItem.id === "oneShift") {
-                        this.disablePointerEventsForOneShifts();
-                    }
-                }
-                if (oldValue && oldValue.event && oldValue.event.type === "trackend") {
-                    //if an employee is dropped...
-                    if (oldValue.draggedItem.id === "oneEmployee") {
-                        this.moveEmployee(oldValue);
-                    } else if (oldValue.draggedItem.id === "oneShift") {
-                        this.enablePointerEventsForOneShifts();
-                        this.moveShift(oldValue);
-                    }
-                }
-            },
-            moveEmployee: function(dragInfo) {
-                //if the target is a "oneShift"...
-                if (dragInfo.dropTarget && dragInfo.dropTarget.id === "oneShift" && !dragInfo.dropTarget.classList.contains("shiftData")) {
-                    //if this "oneShift" does not already have the "employee"
-                    if (dragInfo.dropTarget.shift.employees.indexOf(dragInfo.draggedItem.employee) === -1) {
-                        //add the "employee" to the "oneShift")
-                        dragInfo.dropTarget.shift.employees.push(dragInfo.draggedItem.employee);
+                            var currentShiftIndex;
+                            for (currentShiftIndex = 0; currentShiftIndex < currentShifts.length; currentShiftIndex++) {
+                                var currentShift = currentShifts[currentShiftIndex];
+                                var currentStartTime = currentShift.getAdjustedStartTime(dayOfWeek);
+                                var currentEndTime = currentShift.getAdjustedEndTime(dayOfWeek);
 
-                        var clonedDropTargetShift = JSON.parse(JSON.stringify(dragInfo.dropTarget.shift));
-                        clonedDropTargetShift.employees = dragInfo.dropTarget.shift.employees;
+                                var timeCollidingShifts = currentShifts.filter( function(shift) {
+                                    if (shift === currentShift) return true;
+                                    var otherStartTime = shift.getAdjustedStartTime(dayOfWeek);
+                                    var otherEndTime = shift.getAdjustedEndTime(dayOfWeek);
+                                    var isColliding =  ((otherStartTime <= currentStartTime && otherEndTime > currentStartTime) || (otherStartTime > currentStartTime && otherStartTime < currentEndTime));
+                                    var isLeftColliding = (isColliding && currentShifts.indexOf(currentShift) > currentShifts.indexOf(shift));
+                                    return isLeftColliding;
+                                });
 
-                        this.currentSchedule.weekSchedules.forEach( function (weekSchedule) {
-                            var shiftIndex = weekSchedule.shifts.indexOf(dragInfo.dropTarget.shift);
-                            if (shiftIndex !== -1) {
-                                weekSchedule.shifts.splice(shiftIndex, 1);
-                                weekSchedule.shifts.push(clonedDropTargetShift);
-                            }
-                        });
-
-                        //if the "employee" was dragged from (another) "oneShift"
-
-                        if (dragInfo.draggedItem.offsetParent.id === "oneShift") {
-                            //remove the "employee" from that "oneShift"
-                            var employeeIndex = dragInfo.draggedItem.offsetParent.shift.employees.indexOf(dragInfo.draggedItem.employee);
-                            if (employeeIndex !== -1) {
-                                dragInfo.draggedItem.offsetParent.shift.employees.splice(employeeIndex, 1);
-
-                                var clonedDraggedFromShift = JSON.parse(JSON.stringify(dragInfo.draggedItem.offsetParent.shift));
-                                clonedDraggedFromShift.employees = dragInfo.draggedItem.offsetParent.shift.employees;
-
-                                this.currentSchedule.weekSchedules.forEach( function (weekSchedule) {
-                                    var shiftIndex = weekSchedule.shifts.indexOf(dragInfo.draggedItem.offsetParent.shift);
-                                    if (shiftIndex !== -1) {
-                                        weekSchedule.shifts.splice(shiftIndex, 1);
-                                        weekSchedule.shifts.push(clonedDraggedFromShift);
+                                currentShift.setWidth(timeCollidingShifts.length, false, dayOfWeek);
+                                timeCollidingShifts.forEach( function (shift) {
+                                    if (shift.getWidth(dayOfWeek) < timeCollidingShifts.length) {
+                                        shift.setWidth(1, true, dayOfWeek);
                                     }
                                 });
 
+                                var spaceFound = false;
+                                var shiftPosition;
+                                var currentShiftWidth = currentShift.getWidth(dayOfWeek);
+                                var shiftWidth = currentShiftWidth;
+                                var currentShiftPosition = currentShift.getPosition(dayOfWeek);
+                                while (!spaceFound && shiftWidth < 10) { //10 to prevent an infinite loop if a bug is encountered
+                                    for (shiftPosition = 1; shiftPosition <= shiftWidth; shiftPosition++) {
+                                        var spaceCollidingShifts = timeCollidingShifts.filter( function (shift) {
+                                            if (shift === currentShift) return false;
+                                            var otherShiftPosition = shift.getPosition(dayOfWeek);
+                                            var isColliding = (otherShiftPosition === shiftPosition && currentShifts.indexOf(currentShift) > currentShifts.indexOf(shift));
+                                            if (isColliding) {
+                                                return true;
+                                            } else {
+                                                return false;
+                                            }
+                                        });
+                                        if (spaceCollidingShifts.length === 0) {
+                                            spaceFound = true;
+                                            currentShiftPosition = shiftPosition;
+                                            break;
+                                        }
+                                    }
+                                    if (shiftWidth === currentShiftPosition && !spaceFound) {
+                                        shiftWidth = shiftPosition + 1;
+                                    }
+                                }
+                                if (currentShiftPosition > shiftWidth) {
+                                    shiftWidth = currentShiftPosition;
+                                }
+                                currentShift.setWidth(shiftWidth, false, dayOfWeek);
+                                currentShift.setPosition(currentShiftPosition, dayOfWeek);
                             }
                         }
                     }
-                    this.updated++;
-                }
-            },
-            moveShift: function(dragInfo) {
-                //if the target is a "weekDay"...
-                if (dragInfo.dropTarget && dragInfo.dropTarget.id === "weekDay") {
+                },
+                dragInfo: {},
+                dragInfoChanged: function(oldValue, newValue) {
+                    if (Object.keys(this.dragInfo).length === 0) { //check if this.dragInfo is an empty object (no object is dragged -> cursor should be visible)
+                        this.style.cursor = "default";
+                        this.$.paperSlider.style.cursor = "default";
+                    } else {
+                        this.style.cursor = "none";
+                        this.$.paperSlider.style.cursor = "none";
+                    }
 
-                    var dropWeekDayIndex = parseInt(dragInfo.dropTarget.attributes['weekDayIndex'].value);
-
-                    var dropOneWeek = dragInfo.dropTarget.parentElement.offsetParent;
-                    var dropShifts = dropOneWeek.data.shifts;
-                    var draggedShift =  dragInfo.draggedItem.shift;
-                    //if this week does not already have the "oneShift" or if this week, but not this "weekDay" have the "oneShift"
-                    if (dropShifts.indexOf(draggedShift) === -1 || (draggedShift.dayOfWeek !== dropWeekDayIndex + 1 || draggedShift.dayOfWeek - 7 !== dropWeekDayIndex + 1 )) {
-                        draggedShift.week = dropOneWeek.weekNumber;
-                        draggedShift.dayOfWeek = dropWeekDayIndex + 1;
-
-                        var originOneWeek = dragInfo.draggedItem.parentElement.offsetParent;
-
-                        //sometimes one shift spans over several weeks, fetch all weeks that holds the dragged shift.
-                        var weekSchedulesWithShift = this.currentSchedule.weekSchedules.filter( function (weekSchedule) {
-                            return weekSchedule.shifts.indexOf(draggedShift) !== -1;
-                        });
-                        //...remove this shift from this/these weeks.
-                        weekSchedulesWithShift.forEach( function(weekSchedule) {
-                            var shiftIndex = weekSchedule.shifts.indexOf(draggedShift);
-                            if (shiftIndex !== -1) {
-                                weekSchedule.shifts.splice(shiftIndex, 1);
-                            }
-                        });
-                        //add the shift to the week it is dragged to. Make a copy to trigger a UI update.
-                        var dropWeekSchedule = this.currentSchedule.weekSchedules[dropOneWeek.weekNumber - 1];
-                        var draggedShiftClone = JSON.parse(JSON.stringify(draggedShift));
-                        dropWeekSchedule.shifts.push(draggedShiftClone);
-
-                        //if the shift is dragged to a Sunday and the shift spans over two days, also add it to next week's shifts.
-                        if (draggedShift.dayOfWeek === 7 && draggedShift.endTime <= draggedShift.startTime) {
-                            var nextDropWeekSchedule;
-                            //if next week is within the number of weeks, set next week to the dragged-to week + 1
-                            if (dropOneWeek.weekNumber < this.currentSchedule.numberOfWeeks) {
-                                nextDropWeekSchedule = this.currentSchedule.weekSchedules[dropOneWeek.weekNumber - 1 + 1];
-                                //...or else, there are no more weeks, set next week to the first week
-                            } else {
-                                nextDropWeekSchedule = this.currentSchedule.weekSchedules[0];
-                            }
-                            //add a copy to the next week. Make a copy to trigger a UI update.
-                            nextDropWeekSchedule.shifts.push(draggedShiftClone);
+                    if (newValue && newValue.event && newValue.event.type === "track") {
+                        if (newValue.draggedItem.id === "oneShift") {
+                            this.disablePointerEventsForOneShifts();
                         }
                     }
-                    this.adjustShiftWidths(); //recalculate the shifts' widths.
-                    this.updated++;
+                    if (oldValue && oldValue.event && oldValue.event.type === "trackend") {
+                        //if an employee is dropped...
+                        if (oldValue.draggedItem.id === "oneEmployee") {
+                            this.moveEmployee(oldValue);
+                        } else if (oldValue.draggedItem.id === "oneShift") {
+                            this.enablePointerEventsForOneShifts();
+                            this.moveShift(oldValue);
+                        }
+                    }
+                },
+                moveEmployee: function(dragInfo) {
+                    //if the target is a "oneShift"...
+                    if (dragInfo.dropTarget && dragInfo.dropTarget.id === "oneShift" && !dragInfo.dropTarget.classList.contains("shiftData")) {
+                        //if this "oneShift" does not already have the "employee"
+                        if (dragInfo.dropTarget.shift.employees.indexOf(dragInfo.draggedItem.employee) === -1) {
+                            //add the "employee" to the "oneShift")
+                            dragInfo.dropTarget.shift.employees.push(dragInfo.draggedItem.employee);
+
+                            var clonedDropTargetShift = dragInfo.dropTarget.shift.clone();
+
+                            this.schedule.weekSchedules.forEach( function (weekSchedule) {
+                                var shiftIndex = weekSchedule.shifts.indexOf(dragInfo.dropTarget.shift);
+                                if (shiftIndex !== -1) {
+                                    weekSchedule.shifts.splice(shiftIndex, 1);
+                                    weekSchedule.shifts.push(clonedDropTargetShift);
+                                }
+                            });
+
+                            //if the "employee" was dragged from (another) "oneShift"
+                            if (dragInfo.draggedItem.offsetParent.id === "oneShift") {
+                                //remove the "employee" from that "oneShift"
+                                var employeeIndex = dragInfo.draggedItem.offsetParent.shift.employees.indexOf(dragInfo.draggedItem.employee);
+                                if (employeeIndex !== -1) {
+                                    dragInfo.draggedItem.offsetParent.shift.employees.splice(employeeIndex, 1);
+
+                                    var clonedDraggedFromShift = dragInfo.draggedItem.offsetParent.shift.clone();
+
+                                    this.schedule.weekSchedules.forEach( function (weekSchedule) {
+                                        var shiftIndex = weekSchedule.shifts.indexOf(dragInfo.draggedItem.offsetParent.shift);
+                                        if (shiftIndex !== -1) {
+                                            weekSchedule.shifts.splice(shiftIndex, 1);
+                                            weekSchedule.shifts.push(clonedDraggedFromShift);
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        this.updated++;
+                    }
+                },
+                moveShift: function(dragInfo) {
+                    //if the target is a "weekDay"...
+                    if (dragInfo.dropTarget && dragInfo.dropTarget.id === "weekDay") {
+
+                        var dropWeekDayIndex = parseInt(dragInfo.dropTarget.attributes['weekDayIndex'].value);
+
+                        var dropOneWeek = dragInfo.dropTarget.parentElement.offsetParent;
+                        var dropShifts = dropOneWeek.data.shifts;
+                        var draggedShift =  dragInfo.draggedItem.shift;
+                        //if this week does not already have the "oneShift" or if this week, but not this "weekDay" have the "oneShift"
+                        if (dropShifts.indexOf(draggedShift) === -1 || (draggedShift.dayOfWeek !== dropWeekDayIndex + 1 || draggedShift.dayOfWeek - 7 !== dropWeekDayIndex + 1 )) {
+                            draggedShift.week = dropOneWeek.weekNumber;
+                            draggedShift.dayOfWeek = dropWeekDayIndex + 1;
+
+                            var originOneWeek = dragInfo.draggedItem.parentElement.offsetParent;
+
+                            //sometimes one shift spans over several weeks, fetch all weeks that holds the dragged shift.
+                            var weekSchedulesWithShift = this.schedule.weekSchedules.filter( function (weekSchedule) {
+                                return weekSchedule.shifts.indexOf(draggedShift) !== -1;
+                            });
+                            //...remove this shift from this/these weeks.
+                            weekSchedulesWithShift.forEach( function(weekSchedule) {
+                                var shiftIndex = weekSchedule.shifts.indexOf(draggedShift);
+                                if (shiftIndex !== -1) {
+                                    weekSchedule.shifts.splice(shiftIndex, 1);
+                                }
+                            });
+                            //add the shift to the week it is dragged to. Make a copy to trigger a UI update.
+                            var dropWeekSchedule = this.schedule.weekSchedules[dropOneWeek.weekNumber - 1];
+                            var draggedShiftClone;
+                            if (draggedShift.constructor.name === "Shift") {
+                                draggedShiftClone = draggedShift.clone();
+                            } else if (draggedShift.constructor.name === "ShiftDefinition") {
+                                draggedShiftClone = draggedShift.createShift();
+                            }
+                            dropWeekSchedule.shifts.push(draggedShiftClone);
+
+                            //if the shift is dragged to a Sunday and the shift spans over two days, also add it to next week's shifts.
+                            if (draggedShift.dayOfWeek === 7 && draggedShift.endTime <= draggedShift.startTime) {
+                                var nextDropWeekSchedule;
+                                //if next week is within the number of weeks, set next week to the dragged-to week + 1
+                                if (dropOneWeek.weekNumber < this.schedule.numberOfWeeks) {
+                                    nextDropWeekSchedule = this.schedule.weekSchedules[dropOneWeek.weekNumber - 1 + 1];
+                                    //...or else, there are no more weeks, set next week to the first week
+                                } else {
+                                    nextDropWeekSchedule = this.schedule.weekSchedules[0];
+                                }
+                                //add a copy to the next week. Make a copy to trigger a UI update.
+                                nextDropWeekSchedule.shifts.push(draggedShiftClone);
+                            }
+                        }
+                        this.adjustShiftWidths(); //recalculate the shifts' widths.
+                        this.updated++;
+                    }
+                },
+                disablePointerEventsForOneShifts: function() {
+                    var els = document.querySelectorAll('* /deep/ #oneShift');
+                    for (var i = 0; i < els.length; i++) {
+                        els[i].style.pointerEvents = "none";
+                    }
+                },
+                enablePointerEventsForOneShifts: function() {
+                    var els = document.querySelectorAll('* /deep/ #oneShift');
+                    for (var i = 0; i < els.length; i++) {
+                        els[i].style.pointerEvents = "auto";
+                    }
                 }
-            },
-            disablePointerEventsForOneShifts: function() {
-                var els = document.querySelectorAll('* /deep/ #oneShift');
-                for (var i = 0; i < els.length; i++) {
-                    els[i].style.pointerEvents = "none";
-                }
-            },
-            enablePointerEventsForOneShifts: function() {
-                var els = document.querySelectorAll('* /deep/ #oneShift');
-                for (var i = 0; i < els.length; i++) {
-                    els[i].style.pointerEvents = "auto";
-                }
-            }
-        });
+            });
+        })();
+
     </script>
 </polymer-element>

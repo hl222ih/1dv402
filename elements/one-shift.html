@@ -22,17 +22,17 @@
         </template>
         <div id="shiftCode" style="font-weight: bolder;">{{shift.code}}</div>
         <div id="displayTime">{{shift.startTime|minutesToHHMMString}}-{{shift.endTime|minutesToHHMMString}}</div>
+        <div>{{testProperty.name}}</div>
     </template>
     <script>
         (function() {
+            'use strict';
             var DAYS_IN_A_WEEK = 7;
             var MINUTES_IN_A_DAY = 1440;
             var MINUTES_IN_AN_HOUR = 60;
 
             Polymer('one-shift', {
-                observe: {
-                    'shift.employees' : 'updateStylesTwice'
-                },
+                testProperty: {},
                 dragInfo: {},
                 minutesToHHMMString: function (minutes) {
                     var HHMMString,
@@ -151,6 +151,8 @@
                 },
                 domReady: function () {
                     this.updateStyles();
+                    this.testProperty = this.shift.employees[0];
+
                 },
                 attached: function () {
                     if (this.listOfInstances.indexOf(this) === -1) {
@@ -164,10 +166,6 @@
                     this.listOfInstances.forEach( function (shift) {
                         shift.updateStyles();
                     });
-                },
-                updateStylesTwice: function () {
-                    this.updateStyles();
-                    this.updateStyles();
                 },
                 updateStyles: function() {
                     var pxWidth = (this.pxDayWidth - 1) / (this.part === "first" ? this.shift.numberOfShiftsWideForFirst : this.shift.numberOfShiftsWideForSecond), //parseFloat(getComputedStyle(this).width), //more accurate than offsetWidth (but includes overflowed elements = possible problem?)

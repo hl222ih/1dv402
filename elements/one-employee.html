@@ -12,6 +12,7 @@
     </template>
     <script>
         (function() {
+            'use strict';
             Polymer('one-employee', {
                 ready: function() {
                     this.addEventListener('drag-start', this.oneEmployeeDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
@@ -22,7 +23,7 @@
                     this.dragInfo = dragInfo; //binding to the rest of the application
 
                     //style the drag avatar
-                    dragInfo.avatar.style.cssText = 'display: block; z-index: 1000; left: -14px; top: -8px; border: 1px solid gray; font-size: 60%; width: 24px; height: 12px; border-radius: 25%; text-align: center; box-shadow: 0 1px 0 rgba(255,255,255,.2), inset 0 4px 5px rgba(0,0,0,.2), inset 0 1px 0 rgba(0,0,0,.2); border-radius: 5px;'; //should be done better
+                    dragInfo.avatar.style.cssText = 'font-family: "Trebuchet MS", Helvetica, sans-serif; display: block; z-index: 1000; left: -14px; top: -8px; border: 1px solid gray; font-size: 60%; width: 24px; height: 12px; border-radius: 25%; text-align: center; box-shadow: 0 1px 0 rgba(255,255,255,.2), inset 0 4px 5px rgba(0,0,0,.2), inset 0 1px 0 rgba(0,0,0,.2); border-radius: 5px;'; //should be done better
                     dragInfo.avatar.style.backgroundColor = this.employee.bgColor;
                     dragInfo.avatar.innerText = this.employee.code;
 
