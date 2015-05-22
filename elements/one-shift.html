@@ -22,7 +22,6 @@
         </template>
         <div id="shiftCode" style="font-weight: bolder;">{{shift.code}}</div>
         <div id="displayTime">{{shift.startTime|minutesToHHMMString}}-{{shift.endTime|minutesToHHMMString}}</div>
-        <div>{{testProperty.name}}</div>
     </template>
     <script>
         (function() {
@@ -32,7 +31,9 @@
             var MINUTES_IN_AN_HOUR = 60;
 
             Polymer('one-shift', {
-                testProperty: {},
+                observe: {
+                    'shift.employees': 'updateStyles'
+                },
                 dragInfo: {},
                 minutesToHHMMString: function (minutes) {
                     var HHMMString,
@@ -151,8 +152,6 @@
                 },
                 domReady: function () {
                     this.updateStyles();
-                    this.testProperty = this.shift.employees[0];
-
                 },
                 attached: function () {
                     if (this.listOfInstances.indexOf(this) === -1) {
@@ -161,6 +160,9 @@
                 },
                 detached: function () {
                     this.listOfInstances.splice(this.listOfInstances.indexOf(this), 1);
+                    this.listOfInstances.forEach( function (shift) {
+                        shift.updateStyles();
+                    });
                 },
                 pxDayWidthChanged: function () {
                     this.listOfInstances.forEach( function (shift) {

@@ -3,48 +3,70 @@
 <link rel="import" href="one-week.html"/>
 <link rel="import" href="one-shift.html"/>
 <link rel="import" href="one-employee.html"/>
+<link rel="import" href="one-delete.html"/>
 <link rel="import" href="../bower_components/paper-button/paper-button.html"/>
 <link rel="import" href="../bower_components/core-splitter/core-splitter.html"/>
 <link rel="import" href="../bower_components/core-collapse/core-collapse.html"/>
 <link rel="import" href="../bower_components/core-range/core-range.html"/>
+<link rel="import" href="../bower_components/paper-dialog/paper-action-dialog.html"/>
 
 <polymer-element unresolved name="one-schedule" horizontal layout>
     <template>
         <link rel="stylesheet" href="one-schedule.css" type="text/css">
         <div vertical layout style="width: 80%; height: 100%;">
             <div id="headerContainer" style="display: block; width: 98%; max-height: 10%;">
+                <one-delete id="oneDelete" dragInfo="{{dragInfo}}"></one-delete>
                 <div id="scheduleSelectContainer" class="selectContainer">
+                    <paper-button raised>Logga&nbsp;in</paper-button>
+                    <paper-button raised>Spara</paper-button>
+                    <paper-button raised onclick="window.print()">Skriv&nbsp;ut</paper-button>
                 </div>
                 <div id="employeeSelectContainer" class="selectContainer">
                     <template repeat="{{employee in schedule.employees}}">
-                        <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
+                        <one-employee id="oneEmployee" class="employeeData" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
                     </template>
+                    <paper-button raised>Ny</paper-button>
                 </div>
                 <div id="shiftSelectContainer" class="selectContainer">
                     <template repeat="{{shift in schedule.shiftDefinitions}}">
                         <one-shift id="oneShift" class="shiftData" shift="{{shift}}" dragInfo="{{dragInfo}}" style="background-color: #eee"></one-shift>
                     </template>
+                    <paper-button raised>Ny</paper-button>
                 </div>
             </div>
-            <div flex id="scheduleContainer" style="margin: 1%; width: 98%;">
+            <div flex id="scheduleContainer" style="margin: 1%; width: 98%; maxHeight: 200px">
                 <paper-slider id="paperSlider" min="200" max="900" value="[[pxWeekWidth]]" immediateValue="{{pxWeekWidth}}"></paper-slider>
                 <template repeat="{{weekSchedule, index in schedule.weekSchedules}}">
-                    <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 250 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{schedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
+                    <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 220 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{schedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
                 </template>
             </div>
+            <paper-action-dialog id="deleteEmployeeDialog" heading="Radera anställd?"
+                                 transition="core-transition-top" layered="true"
+                                 backdrop="true" closeSelector="[dismissive]">
+                <p>Alla inställningar och utplaceringar av den anställda kommer att försvinna.</p>
+                <paper-button dismissive default>Avbryt</paper-button>
+                <paper-button id="deleteEmployeeButton" affirmative>Radera</paper-button>
+            </paper-action-dialog>
+            <paper-action-dialog id="deleteShiftDialog" heading="Radera tur?"
+                                 transition="core-transition-top" layered="true"
+                                 backdrop="true" closeSelector="[dismissive]">
+                <p>Alla inställningar och utplaceringar av turen kommer att försvinna.</p>
+                <paper-button dismissive default>Avbryt</paper-button>
+                <paper-button id="deleteShiftButton" affirmative>Radera</paper-button>
+            </paper-action-dialog>
         </div>
-        <core-splitter direction="left" allowOverflow="true"></core-splitter>
+        <core-splitter id="splitter" direction="left" allowOverflow="true"></core-splitter>
         <div flex id="infoContainer" style="font-family: 'Trebuchet MS', Helvetica, sans-serif; overflow-y: auto;">
             <template repeat="{{employee, index in schedule.employees}}">
                 <core-range min="0" max="100" value="{{employee.percentagePlanned}}" ratio="50"></core-range>
                 <div class="progress-bar"  style="width: 50%;"></div>
                 <div on-click="{{toggle}}" style="padding: 1px; padding-left: 5px; border: 1px solid #dedede">
-                    {{employee.name}} ({{employee.code}}) (No o s: {{schedule.numberOfShifts}})
+                    {{employee.name}} ({{employee.code}})<!-- (No o s: {{schedule.numberOfShifts}})-->
                 </div>
                 <core-collapse style="padding-left: 2px; font-size: 10px;">
                     <div>Utlagda timmar: {{employee.hoursPlanned}} (av {{employee.totalHours}})</div>
                     <div>Utlagd procent: {{employee.percentagePlanned}} % (av {{employee.employmentPercentage}} %)</div>
-                    <div>Antal utlagda pass: {{employee.numberOfShifts}} ( {{employee.hoursPerShift}} timmar / pass)</div>
+                    <div>Utlagda turer: {{employee.numberOfShifts}} ( {{employee.hoursPerShift}} timmar / tur)</div>
                 </core-collapse>
             </template>
         </div>
@@ -96,6 +118,7 @@
                         shiftData.shiftDefinition = shiftDefinition;
 
                         var shift = new Shift(shiftData);
+                        this.addEmployeesToShift(shift, shiftData.employeeCodes);
 
                         this.weekSchedules[shift.week - 1].shifts.push(shift);
                         if (shift.endTime < shift.startTime) {
@@ -115,7 +138,7 @@
             function Shift(shiftData) {
                 shiftData = shiftData || {};
                 this.code = shiftData.shiftCode || "";
-                this.employees = getEmployeesFromCodes(shiftData.employeeCodes); //todo: change to employeesCodes
+                this.employees = [];
                 this.workPlace = workplacesData.filter(function (workplaceData) {
                     return workplaceData.code === shiftData.workplaceCode;
                 })[0] || {};
@@ -215,16 +238,7 @@
                     shifts = shifts.concat(weekSchedule.shifts);
                 });
                 filteredShifts = shifts.filter( function (shift) {
-                    //return shift.employees.indexOf(employee) !== -1; //borde ju funka? bugg annanstans?
-                    var match = false;
-                    if (shift.employees) {
-                        shift.employees.forEach( function (emp) {
-                            if (!match) {
-                                match = emp.code === employee.code;
-                            }
-                        });
-                    }
-                    return match;
+                    return shift.employees.indexOf(employee) !== -1;
                 });
 
                 return filteredShifts;
@@ -246,6 +260,43 @@
                 });
 
                 return numShifts;
+            };
+
+            Schedule.prototype.deleteShift = function(shift) {
+                var isDeleted = false;
+
+                this.weekSchedules.forEach( function (weekSchedule) {
+                    var indexOfShift = weekSchedule.shifts.indexOf(shift)
+                    if (indexOfShift !== -1) {
+                        weekSchedule.shifts.splice(indexOfShift, 1);
+                        isDeleted = true;
+                    }
+                });
+
+                return isDeleted;
+            };
+
+            Schedule.prototype.deleteShiftDefinition = function(shiftDefinition) {
+                var isDeleted = false,
+                    indexOfShiftDefinition = this.shiftDefinitions.indexOf(shiftDefinition);
+
+                if (indexOfShiftDefinition !== -1) {
+                    this.shiftDefinitions.splice(indexOfShiftDefinition, 1);
+                    isDeleted = true;
+                }
+
+                return isDeleted;
+            };
+
+            Schedule.prototype.addEmployeesToShift = function(shift, employeeCodes) {
+                employeeCodes.forEach( function (empCode) {
+                    var employee = this.employees.filter( function(employee) {
+                        return empCode === employee.code;
+                    })[0];
+                    if (employee) {
+                        shift.employees.push(employee);
+                    }
+                },this);
             };
 
             ShiftDefinition.prototype.createShift = function() {
@@ -360,6 +411,20 @@
                 }
                 return clone;
             };
+
+            Shift.prototype.deleteEmployee = function(employee) {
+                var isDeleted = false;
+
+                var indexOfEmployee = this.employees.indexOf(employee)
+
+                if (indexOfEmployee !== -1) {
+                    this.employees.splice(indexOfEmployee, 1);
+                    isDeleted = true;
+                }
+
+                return isDeleted;
+            };
+
 
             var getEmployeesFromCodes = function(codes) {
                 codes = codes || [];
@@ -659,6 +724,9 @@
                 }
             ];
 
+            var removeEmployeeEventListeners = [];
+            var removeShiftEventListeners = [];
+
             Polymer('one-schedule', {
                 returnEmptyString: function (str) {
                     return "";
@@ -807,7 +875,22 @@
                         }
                     }
                 },
+                forceShiftUpdate: function(shift) {
+
+                    var clonedShift = shift.clone();
+
+                    this.schedule.weekSchedules.forEach( function (weekSchedule) {
+                        var shiftIndex = weekSchedule.shifts.indexOf(shift);
+                        if (shiftIndex !== -1) {
+                            weekSchedule.shifts.splice(shiftIndex, 1);
+                            weekSchedule.shifts.push(clonedShift);
+                        }
+                    });
+                },
                 moveEmployee: function(dragInfo) {
+                    var draggedFromShift,
+                        draggedEmployee;
+
                     //if the target is a "oneShift"...
                     if (dragInfo.dropTarget && dragInfo.dropTarget.id === "oneShift" && !dragInfo.dropTarget.classList.contains("shiftData")) {
                         //if this "oneShift" does not already have the "employee"
@@ -828,26 +911,51 @@
                             //if the "employee" was dragged from (another) "oneShift"
                             if (dragInfo.draggedItem.offsetParent.id === "oneShift") {
                                 //remove the "employee" from that "oneShift"
-                                var employeeIndex = dragInfo.draggedItem.offsetParent.shift.employees.indexOf(dragInfo.draggedItem.employee);
-                                if (employeeIndex !== -1) {
-                                    dragInfo.draggedItem.offsetParent.shift.employees.splice(employeeIndex, 1);
-
-                                    var clonedDraggedFromShift = dragInfo.draggedItem.offsetParent.shift.clone();
-
-                                    this.schedule.weekSchedules.forEach( function (weekSchedule) {
-                                        var shiftIndex = weekSchedule.shifts.indexOf(dragInfo.draggedItem.offsetParent.shift);
-                                        if (shiftIndex !== -1) {
-                                            weekSchedule.shifts.splice(shiftIndex, 1);
-                                            weekSchedule.shifts.push(clonedDraggedFromShift);
-                                        }
-                                    });
-                                }
+                                draggedFromShift = dragInfo.draggedItem.offsetParent.shift;
+                                draggedEmployee = dragInfo.draggedItem.employee;
+                                draggedFromShift.deleteEmployee(draggedEmployee);
+                                this.forceShiftUpdate(draggedFromShift);
                             }
                         }
-                        this.updated++;
+                    } else if (dragInfo.dropTarget && dragInfo.dropTarget.id === "oneDelete") {
+                        draggedEmployee = dragInfo.draggedItem.employee;
+
+                        //if dragged from a oneShift, delete it
+                        if (dragInfo.draggedItem.offsetParent.id === "oneShift") {
+                            draggedFromShift = dragInfo.draggedItem.offsetParent.shift;
+                            if (draggedEmployee.constructor.name === "Employee") {
+                                if (draggedFromShift.deleteEmployee(draggedEmployee)) {
+                                    this.forceShiftUpdate(dragInfo.draggedItem.offsetParent.shift);
+                                }
+                            }
+                        //else, (dragged from board), ask user if wants to proceed, then delete it + all occurrences on shifts
+                        } else {
+                            var deleteEmployeeCompletely = function(e) {
+                                this.schedule.employees.splice(this.schedule.employees.indexOf(draggedEmployee), 1);
+                                this.schedule.weekSchedules.forEach( function(weekSchedule) {
+                                    weekSchedule.shifts.forEach( function (shift) {
+                                        shift.deleteEmployee(draggedEmployee);
+                                    });
+                                }, this);
+                                this.$.deleteEmployeeDialog.close();
+                                //todo: message
+                            }.bind(this);
+
+                            removeEmployeeEventListeners.forEach( function (eventListener) {
+                                this.$.deleteEmployeeButton.removeEventListener('click', eventListener, false);
+                            },this);
+
+                            this.$.deleteEmployeeDialog.toggle();
+                            this.$.deleteEmployeeButton.addEventListener('click', deleteEmployeeCompletely, false);
+                            removeEmployeeEventListeners.push(deleteEmployeeCompletely);
+                        }
                     }
+                    this.updated++;
+                    this.adjustShiftWidths();
                 },
                 moveShift: function(dragInfo) {
+                    var draggedShift;
+
                     //if the target is a "weekDay"...
                     if (dragInfo.dropTarget && dragInfo.dropTarget.id === "weekDay") {
 
@@ -855,7 +963,7 @@
 
                         var dropOneWeek = dragInfo.dropTarget.parentElement.offsetParent;
                         var dropShifts = dropOneWeek.data.shifts;
-                        var draggedShift =  dragInfo.draggedItem.shift;
+                        draggedShift =  dragInfo.draggedItem.shift;
                         //if this week does not already have the "oneShift" or if this week, but not this "weekDay" have the "oneShift"
                         if (dropShifts.indexOf(draggedShift) === -1 || (draggedShift.dayOfWeek !== dropWeekDayIndex + 1 || draggedShift.dayOfWeek - 7 !== dropWeekDayIndex + 1 )) {
                             draggedShift.week = dropOneWeek.weekNumber;
@@ -898,9 +1006,52 @@
                                 nextDropWeekSchedule.shifts.push(draggedShiftClone);
                             }
                         }
-                        this.adjustShiftWidths(); //recalculate the shifts' widths.
-                        this.updated++;
+                    } else if (dragInfo.dropTarget && dragInfo.dropTarget.id === "oneDelete") {
+                        //delete shift from week or shiftDefinition from board
+                        draggedShift =  dragInfo.draggedItem.shift;
+                        if (draggedShift.constructor.name === "Shift") {
+                            if (this.schedule.deleteShift(draggedShift)) {
+                            } else {
+                                //no shift deleted
+                            }
+                        } else if (draggedShift.constructor.name === "ShiftDefinition") {
+                            var deleteShiftCompletely = function(e) {
+                                var code = draggedShift.code;
+                                if (this.schedule.deleteShiftDefinition(draggedShift)) {
+
+                                    this.schedule.weekSchedules.forEach( function(weekSchedule) {
+                                        var shiftsToRemove = [];
+                                        weekSchedule.shifts.forEach( function (shift) {
+                                            if (shift.code === code) {
+                                                shiftsToRemove.push(shift);
+                                            }
+                                        });
+                                        shiftsToRemove.forEach( function(shift) {
+                                            var shiftIndex = weekSchedule.shifts.indexOf(shift);
+                                            weekSchedule.shifts.splice(shiftIndex, 1);
+                                        });
+                                        shiftsToRemove = []; //reset
+                                    }, this);
+                                    this.$.deleteShiftDialog.close();
+                                    //todo: message
+                                } else {
+                                    //no shift definition nor shifts were deleted
+                                }
+                                this.updated++;
+                                this.adjustShiftWidths(); //recalculate the shifts' widths.
+                            }.bind(this);
+
+                            removeShiftEventListeners.forEach( function (eventListener) {
+                                this.$.deleteShiftButton.removeEventListener('click', eventListener, false);
+                            },this);
+
+                            this.$.deleteShiftDialog.toggle();
+                            this.$.deleteShiftButton.addEventListener('click', deleteShiftCompletely, false);
+                            removeShiftEventListeners.push(deleteShiftCompletely);
+                        }
                     }
+                    this.updated++;
+                    this.adjustShiftWidths(); //recalculate the shifts' widths.
                 },
                 disablePointerEventsForOneShifts: function() {
                     var els = document.querySelectorAll('* /deep/ #oneShift');

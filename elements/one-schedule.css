@@ -52,35 +52,39 @@ paper-button::shadow #ripple {
 }
 
 paper-button[active] {
-    background-color: lightskyblue;
+    /*background-color: lightskyblue;*/
     color: white;
     box-sizing: border-box;
 
 }
 
+paper-button /deep/ .button-content {
+    padding: 0.18em;
+}
 paper-button:not([active]) {
-    background-color: rgba(0, 0, 0, 0.10);
     border-radius: 3px;
     box-sizing: border-box;
 }
 
 paper-button {
+    clear: both;
+    float:left;
     display: inline-block;
-    width: 10%;
-    height: 90%;
-    min-width: 10%;
-    min-height: 33%;
-    font-size: 20%;
+    height: 14px;
+    font-size: 10px;
     box-sizing: border-box;
     text-align: center;
-    margin: 0;
+    margin: 2px;
+    padding: 0;
+    max-width: 80px;
+    min-width: 20px;
 }
 
 .selectContainer {
     display: block;
     width: 30%;
     height: 90%;
-    padding-top: 14px;
+    padding-top: 4px;
     /*border: 1px solid rgba(200,50,50,0.3);*/
 }
 
@@ -97,15 +101,15 @@ paper-button {
     display: block;
     position: absolute;
     height: 100%;
-    left: 24%;
+    left: 12%;
     width: 30%;
 }
 
 #shiftSelectContainer {
     display: block;
     position: absolute;
-    left: 55%;
-    width: 45%;
+    left: 43%;
+    width: 57%;
     height: 100%;
     padding-left: 3px;
 }

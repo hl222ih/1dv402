@@ -82,6 +82,7 @@
                 },
                 mouseOutOfWeekDay: function(e) {
                     e.fromElement.classList.remove('dragShiftHover');
+                    this.dragInfo.dropTarget = null;
                 },
                 weekDays: ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'],
                 weekNumber: 1,
