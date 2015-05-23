@@ -7,11 +7,11 @@
     /*border-radius: 25%;*/
     text-align: center;
     padding-top: 1px;
-    cursor: default;
     font-family: "Trebuchet MS", Helvetica, sans-serif;
     font-size: 10px;
     box-sizing: border-box;
     border-radius: 5px;
+    cursor: move;
 }
 :host(.employeeData) {
     position: relative;

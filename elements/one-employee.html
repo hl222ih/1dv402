@@ -14,6 +14,9 @@
         (function() {
             'use strict';
             Polymer('one-employee', {
+                observe: {
+                    'employee.bgColor':'dragInfoChanged'
+                },
                 ready: function() {
                     this.addEventListener('drag-start', this.oneEmployeeDragStart); //doesn't work declaratively since drag-start is caught and re-fired by core-drag-drop
                 },
@@ -53,6 +56,7 @@
                                 });
                                 for (var i = 0; i < list.length; i++) {
                                     list[i].classList.remove('dragEmployeeHover');
+                                    list[i].classList.remove('dragHover');
                                 }
                             }
                         }
@@ -61,7 +65,7 @@
                     };
                 },
                 dragInfoChanged: function() {
-                    this.style.cursor = Object.keys(this.dragInfo).length === 0 ? "default" : "none";
+                    this.style.cursor = Object.keys(this.dragInfo).length === 0 ? "move" : "none";
                 }
             });
         })();

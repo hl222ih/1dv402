@@ -9,6 +9,7 @@
 <link rel="import" href="../bower_components/core-collapse/core-collapse.html"/>
 <link rel="import" href="../bower_components/core-range/core-range.html"/>
 <link rel="import" href="../bower_components/paper-dialog/paper-action-dialog.html"/>
+<link rel="import" href="../bower_components/paper-input/paper-input-decorator.html"/>
 
 <polymer-element unresolved name="one-schedule" horizontal layout>
     <template>
@@ -23,15 +24,15 @@
                 </div>
                 <div id="employeeSelectContainer" class="selectContainer">
                     <template repeat="{{employee in schedule.employees}}">
-                        <one-employee id="oneEmployee" class="employeeData" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
+                        <one-employee id="oneEmployee" class="employeeData" on-click="{{editEmployee}}" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
                     </template>
-                    <paper-button raised>Ny</paper-button>
+                    <paper-button raised on-click="{{editEmployee}}">Ny</paper-button>
                 </div>
                 <div id="shiftSelectContainer" class="selectContainer">
                     <template repeat="{{shift in schedule.shiftDefinitions}}">
-                        <one-shift id="oneShift" class="shiftData" shift="{{shift}}" dragInfo="{{dragInfo}}" style="background-color: #eee"></one-shift>
+                        <one-shift id="oneShift" class="shiftData" on-click="{{editShift}}" shift="{{shift}}" dragInfo="{{dragInfo}}" style="background-color: #eee"></one-shift>
                     </template>
-                    <paper-button raised>Ny</paper-button>
+                    <paper-button raised on-click="{{newShift}}">Ny</paper-button>
                 </div>
             </div>
             <div flex id="scheduleContainer" style="margin: 1%; width: 98%; maxHeight: 200px">
@@ -53,6 +54,28 @@
                 <p>Alla inställningar och utplaceringar av turen kommer att försvinna.</p>
                 <paper-button dismissive default>Avbryt</paper-button>
                 <paper-button id="deleteShiftButton" affirmative>Radera</paper-button>
+            </paper-action-dialog>
+            <paper-action-dialog id="editEmployeeDialog" heading="Redigera anställd"
+                                 transition="core-transition-top" layered="true"
+                                 backdrop="true" closeSelector="[dismissive]"
+                                 autoCloseDisabled="true">
+                <template bind="{{editedEmployee as employee}}">
+                    <paper-input-decorator label="Namn" floatingLabel="true" style="display: block;" error="{{employee.nameError}}" focused>
+                        <input is="core-input" value="{{employee.name}}" on-blur="{{validateInput}}" data-type="employeeName" autofocus>
+                    </paper-input-decorator>
+                    <paper-input-decorator label="Kod" floatingLabel="true" style="display: block;" error="{{employee.codeError}}">
+                        <input is="core-input" value="{{employee.code}}" on-blur="{{validateInput}}" data-type="employeeCode">
+                    </paper-input-decorator>
+                    <paper-input-decorator label="Heltidsarbetstidsmått (timmar/vecka)" floatingLabel="true" style="display: block;" error="{{employee.weekWorkHoursError}}">
+                        <input is="core-input" value="{{employee.weekWorkHours}}" on-blur="{{validateInput}}" data-type="employeeWeekWorkHours">
+                    </paper-input-decorator>
+                    <paper-input-decorator label="Anställningsgrad (procent)" floatingLabel="true" style="display: block;" error="{{employee.employmentPercentageError}}">
+                        <input is="core-input" value="{{employee.employmentPercentage}}" on-blur="{{validateInput}}" data-type="employeeEmploymentPercentage">
+                    </paper-input-decorator>
+                    <paper-button on-click="{{randomizeEmployeeColor}}" style="background-color: {{employee.bgColor}}">Ändra färg</paper-button>
+                    <paper-button dismissive default>Avbryt</paper-button>
+                    <paper-button id="saveEmployeeButton" affirmative on-click="{{saveEmployeeChanges}}">Spara</paper-button>
+                </template>
             </paper-action-dialog>
         </div>
         <core-splitter id="splitter" direction="left" allowOverflow="true"></core-splitter>
@@ -82,6 +105,7 @@
             };
 
             function Employee(employeeData) {
+                employeeData = employeeData || {};
                 this.code = employeeData.code || "";
                 this.name = employeeData.name || "";
                 this.color = employeeData.color || "black";
@@ -728,6 +752,150 @@
             var removeShiftEventListeners = [];
 
             Polymer('one-schedule', {
+                randomizeEmployeeColor: function() {
+                    var c1 = 255;
+                    var c2 = Math.floor((Math.random() * 120) + 175);
+                    var c3 = Math.floor((Math.random() * (100 - 255 + c2)) + 155);
+                    if (c3 > 235) {
+                        c3 = c3 - 20;
+                    }
+
+                    var colorNumbs = [c1, c2, c3];
+                    var firstPick = Math.floor((Math.random() * 3));
+                    var secondPick = Math.floor((Math.random() * 2));
+                    var color = "rgb(" + colorNumbs.splice(firstPick, 1) + "," + colorNumbs.splice(secondPick, 1) + "," + colorNumbs.splice(0, 1) + ")";
+                    this.editedEmployee.bgColor = color;
+                },
+                validateInput: function(event, detail, sender) {
+                    if (!sender.attributes['data-type']) return;
+                    var type = sender.attributes['data-type'].value;
+                    var decorator = sender.parentNode;
+                    decorator.isInvalid = false;
+
+                    switch(type) {
+                        case "employeeName":
+                            var name = this.editedEmployee.name;
+                            name = name.trim();
+                            if (name.length < 1) {
+                                this.editedEmployee.nameError = "namn måste anges";
+                                decorator.isInvalid = true;
+                            } else if (!name.match(/[a-zA-ZåäöÅÄÖ]/g) || (name.match(/[a-zA-ZåäöÅÄÖ]/g) && name.match(/[a-zA-ZåäöÅÄÖ]/g).length < 2)) { //minst två bokstäver a-ö
+                                this.editedEmployee.nameError = "inte ett giltigt namn";
+                                decorator.isInvalid = true;
+                            } else if (name.length > 25) {
+                                this.editedEmployee.nameError = "namnet är för långt";
+                                decorator.isInvalid = true;
+                            }
+                            break;
+                        case "employeeCode":
+                            var code = this.editedEmployee.code;
+                            code = code.trim();
+                            if (code.length < 1) {
+                                this.editedEmployee.codeError = "kod måste anges";
+                                decorator.isInvalid = true;
+                            } else if (!code.match(/^[a-zA-ZåäöÅÄÖ][a-zA-ZåäöÅÄÖ0-9\-]*$/)) { //only allow -,a-ö and 0-9, not starting with - or digit
+                                this.editedEmployee.codeError = "inte en giltig kod";
+                                decorator.isInvalid = true;
+                            } else if (code.length > 5) {
+                                this.editedEmployee.codeError = "koden är för lång";
+                                decorator.isInvalid = true;
+                            }
+                            break;
+                        case "employeeWeekWorkHours":
+                            var wwh = String(this.editedEmployee.weekWorkHours);
+                            wwh = wwh.trim();
+                            //if "," is used as decimal character, change it to "."
+                            if (wwh.match(/,/g) && wwh.match(/,/g).length === 1) {
+                                wwh = wwh.replace(',', '.');
+                            }
+                            wwh = parseFloat(wwh);
+                            if (isNaN(wwh)) {
+                                this.editedEmployee.weekWorkHoursError = "inte ett giltigt tal";
+                                decorator.isInvalid = true;
+                            } else {
+                                this.editedEmployee.weekWorkHours = wwh;
+                                if (wwh > 60 || wwh < 20) {
+                                    this.editedEmployee.weekWorkHoursError = "inte ett giltigt heltidsarbetstidsmått";
+                                    decorator.isInvalid = true;
+                                }
+                            }
+                            break;
+                        case "employeeEmploymentPercentage":
+                            var ep = String(this.editedEmployee.employmentPercentage);
+                            ep = ep.trim();
+                            if (ep.match(/,/g) && ep.match(/,/g).length === 1) {
+                                ep = ep.replace(',', '.');
+                            }
+                            ep = parseFloat(ep);
+                            if (isNaN(ep)) {
+                                this.editedEmployee.employmentPercentageError = "inte ett giltigt tal";
+                                decorator.isInvalid = true;
+                            } else {
+                                this.editedEmployee.employmentPercentage = ep;
+                                if (ep > 100 || ep < 0) {
+                                    this.editedEmployee.employmentPercentageError = "inte en giltig procentangivelse";
+                                    decorator.isInvalid = true;
+                                }
+                            }
+                            break;
+                        default:
+                    }
+                },
+                editEmployee: function(e) {
+                    var employee = this.schedule.employees.filter( function (empData) {
+                        var match = false;
+                        match = (e.target.employee && e.target.employee.code === empData.code);
+                        return match;
+                    })[0];
+                    if (employee) {
+                        this.editedEmployee = JSON.parse(JSON.stringify(employee)); //not wanting to alter the original object here
+                        this.editedEmployee.oldCode = employee.code;
+                    } else {
+                        this.editedEmployee = new Employee();
+                    }
+                    this.$.editEmployeeDialog.toggle();
+                },
+                saveEmployeeChanges: function(e) {
+                    var fields = this.$.editEmployeeDialog.querySelectorAll("paper-input-decorator");
+                    var isValidated = true;
+                    for (var i = 0; i < fields.length; i++) {
+                        isValidated = (fields[i].isInvalid) ? false : isValidated;
+                    }
+
+                    if (isValidated === true) {
+                        var oldCode = this.editedEmployee.oldCode;
+                        var employee = this.schedule.employees.filter( function(employee) {
+                            return employee.code === oldCode;
+                        })[0];
+                        if (!employee) {
+                            employee = new Employee();
+                            this.schedule.employees.push(employee);
+                        }
+                        employee.code = this.editedEmployee.code;
+                        employee.name = this.editedEmployee.name;
+                        employee.color = this.editedEmployee.color;
+                        employee.weekWorkHours = this.editedEmployee.weekWorkHours;
+                        employee.employmentPercentage = this.editedEmployee.employmentPercentage;
+                        if (employee.bgColor !== this.editedEmployee.bgColor) {
+                            employee.bgColor = this.editedEmployee.bgColor;
+                            var shifts = this.schedule.getEmployeeShifts(employee);
+                            shifts.forEach( function(shift) {
+                                this.forceShiftUpdate(shift);
+                            },this);
+                        }
+
+                        this.$.editEmployeeDialog.close();
+                    }
+                },
+                editShift: function(e) {
+
+                },
+                newEmployee: function(e) {
+
+                },
+                newShift: function(e) {
+
+                },
                 returnEmptyString: function (str) {
                     return "";
                 },
@@ -743,6 +911,7 @@
                     scheduleElement.style.display = 'none';
                     scheduleElement.offsetHeight;
                     scheduleElement.style.display = '';
+
                     this.schedule.updateEmployees();
                     this.schedule.updateShifts();
                 },
@@ -855,9 +1024,19 @@
                     if (Object.keys(this.dragInfo).length === 0) { //check if this.dragInfo is an empty object (no object is dragged -> cursor should be visible)
                         this.style.cursor = "default";
                         this.$.paperSlider.style.cursor = "default";
+
+                        var buttons = this.shadowRoot.querySelectorAll("paper-button");
+                        for (var i = 0; i < buttons.length; i++) {
+                            buttons[i].style.cursor = "pointer";
+                        }
                     } else {
                         this.style.cursor = "none";
                         this.$.paperSlider.style.cursor = "none";
+
+                        var buttons = this.shadowRoot.querySelectorAll("paper-button");
+                        for (var i = 0; i < buttons.length; i++) {
+                            buttons[i].style.cursor = "none";
+                        }
                     }
 
                     if (newValue && newValue.event && newValue.event.type === "track") {
@@ -933,9 +1112,18 @@
                             var deleteEmployeeCompletely = function(e) {
                                 this.schedule.employees.splice(this.schedule.employees.indexOf(draggedEmployee), 1);
                                 this.schedule.weekSchedules.forEach( function(weekSchedule) {
+                                    var alterShifts = [];
                                     weekSchedule.shifts.forEach( function (shift) {
+                                        if (shift.employees.indexOf(draggedEmployee) !== -1) {
+                                            if (alterShifts.indexOf(shift) === -1) {
+                                                alterShifts.push(shift);
+                                            }
+                                        }
+                                    },this);
+                                    alterShifts.forEach( function(shift) {
                                         shift.deleteEmployee(draggedEmployee);
-                                    });
+                                        this.forceShiftUpdate(shift);
+                                    },this);
                                 }, this);
                                 this.$.deleteEmployeeDialog.close();
                                 //todo: message

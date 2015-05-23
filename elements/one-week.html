@@ -14,15 +14,15 @@
             <template repeat="{{shift, index in shifts}}">
                 <!--night shifts are divided into two html-elements (who share shift object)-->
                 <template if="{{shift|shouldDisplayFirstElement}}">
-                    <!--observe changes in shift.employees by including shift.employees.length in the expression -->
-                    <one-shift id="oneShift" part="first" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
+                    <!--observe changes in shift.employees by including shift.employees in the expression -->
+                    <one-shift id="oneShift" part="first" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees && shift | bgColorFromShift}}"></one-shift>
                     <template if="{{shift|shouldDisplaySecondElementToo}}">
-                        <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
+                        <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees && shift | bgColorFromShift}}"></one-shift>
                     </template>
                 </template>
                 <template if="{{shift|shouldDisplaySecondElementOnly}}">
                     <!--observe changes in shift.employees by including shift.employees.length in the expression -->
-                    <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees.length && shift | bgColorFromShift}}"></one-shift>
+                    <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees && shift | bgColorFromShift}}"></one-shift>
                 </template>
             </template>
         </div>
@@ -82,7 +82,9 @@
                 },
                 mouseOutOfWeekDay: function(e) {
                     e.fromElement.classList.remove('dragShiftHover');
-                    this.dragInfo.dropTarget = null;
+                    if (Object.keys(this.dragInfo).length !== 0) {
+                        this.dragInfo.dropTarget = null;
+                    }
                 },
                 weekDays: ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'],
                 weekNumber: 1,

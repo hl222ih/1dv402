@@ -3,7 +3,7 @@
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
 
-<polymer-element name="one-shift" attributes="shift part pxDayHeight pxDayWidth dragInfo isPlaced"  on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
+<polymer-element name="one-shift" attributes="shift part pxDayHeight pxDayWidth dragInfo isPlaced" on-mouseup="{{mouseUpFromShift}}" on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
 
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
@@ -18,7 +18,7 @@
         -->
         <!--<div id="workplaceCode">{{shift.workplace.code}}</div>-->
         <template repeat="{{employee in shift.employees}}">
-            <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
+            <one-employee id="oneEmployee" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};" on-mousedown="{{mouseDownOnShift}}"></one-employee>
         </template>
         <div id="shiftCode" style="font-weight: bolder;">{{shift.code}}</div>
         <div id="displayTime">{{shift.startTime|minutesToHHMMString}}-{{shift.endTime|minutesToHHMMString}}</div>
@@ -148,7 +148,6 @@
                         this.style.height = this.calcMinutesOfNextDay() / 5 * this.pxDayHeight / MINUTES_IN_A_DAY * 5 + 'px';
                         this.style.top = "0";
                     }
-
                 },
                 domReady: function () {
                     this.updateStyles();
@@ -190,24 +189,40 @@
                 },
                 mouseOverShift: function(e) {
                     var self = this;
-                    if (!this.classList.contains('shiftData')) {
-                        if (this.dragInfo.draggedItem && this.dragInfo.draggedItem.id === "oneEmployee") {
-                            var list = this.listOfInstances.filter( function(instance) {
-                                return instance.shift === self.shift;
-                            });
-                            for (var i = 0; i < list.length; i++) {
-                                list[i].classList.add('dragEmployeeHover');
-                            }
-                        }
-                    }
-                },
-                mouseOutOfShift: function(e) {
-                    var self = this;
-                    if (!this.classList.contains('shiftData')) {
+                    if (this.dragInfo.draggedItem && this.dragInfo.draggedItem.id === "oneEmployee") {
                         var list = this.listOfInstances.filter( function(instance) {
                             return instance.shift === self.shift;
                         });
                         for (var i = 0; i < list.length; i++) {
+                            list[i].classList.add('dragHover');
+                        }
+                        if (!this.classList.contains('shiftData')) {
+                            for (i = 0; i < list.length; i++) {
+                                list[i].classList.add('dragEmployeeHover');
+                            }
+                        }
+                        if (!this.classList.contains('shiftData')) {
+                            this.classList.add('dragEmployeeHover');
+                        }
+                        this.classList.add('dragHover');
+                    }
+                },
+                mouseDownOnShift: function(e) {
+                    this.classList.add('dragHover');
+                },
+                mouseUpFromShift: function(e) {
+                    this.classList.remove('dragHover');
+                },
+                mouseOutOfShift: function(e) {
+                    var self = this;
+                    var list = this.listOfInstances.filter( function(instance) {
+                        return instance.shift === self.shift;
+                    });
+                    for (var i = 0; i < list.length; i++) {
+                        list[i].classList.remove('dragHover');
+                    }
+                    if (!this.classList.contains('shiftData')) {
+                        for (i = 0; i < list.length; i++) {
                             list[i].classList.remove('dragEmployeeHover');
                         }
                     }
