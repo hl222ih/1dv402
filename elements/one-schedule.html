@@ -20,19 +20,20 @@
                 <div id="scheduleSelectContainer" class="selectContainer">
                     <paper-button raised>Logga&nbsp;in</paper-button>
                     <paper-button raised>Spara</paper-button>
+                    <paper-button raised style="clear: none;" on-click="{{clearPlaced}}">Rensa</paper-button>
                     <paper-button raised onclick="window.print()">Skriv&nbsp;ut</paper-button>
                 </div>
                 <div id="employeeSelectContainer" class="selectContainer">
                     <template repeat="{{employee in schedule.employees}}">
                         <one-employee id="oneEmployee" class="employeeData" on-click="{{editEmployee}}" employee="{{employee}}" dragInfo="{{dragInfo}}" style="background-color: {{employee.bgColor}};"></one-employee>
                     </template>
-                    <paper-button raised on-click="{{editEmployee}}">Ny</paper-button>
+                    <paper-button raised on-click="{{editEmployee}}">Ny anställd</paper-button>
                 </div>
                 <div id="shiftSelectContainer" class="selectContainer">
                     <template repeat="{{shift in schedule.shiftDefinitions}}">
                         <one-shift id="oneShift" class="shiftData" on-click="{{editShift}}" shift="{{shift}}" dragInfo="{{dragInfo}}" style="background-color: #eee"></one-shift>
                     </template>
-                    <paper-button raised on-click="{{newShift}}">Ny</paper-button>
+                    <paper-button raised on-click="{{editShift}}">Ny tur</paper-button>
                 </div>
             </div>
             <div flex id="scheduleContainer" style="margin: 1%; width: 98%; maxHeight: 200px">
@@ -41,6 +42,14 @@
                     <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 220 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{schedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
                 </template>
             </div>
+            <paper-action-dialog id="clearPlacedDialog" heading="Rensa?"
+                                 transition="core-transition-top" layered="true"
+                                 backdrop="true" closeSelector="[dismissive]">
+                <p>Schemat kommer att rensas på utplacerade turer/anställda.</p>
+                <paper-button dismissive default>Avbryt</paper-button>
+                <paper-button id="clearPlacedShiftsButton" affirmative on-click="{{clearPlacedShifts}}">Rensa turer och anställda</paper-button>
+                <paper-button id="clearPlacedEmployeesButton" affirmative on-click="{{clearPlacedEmployees}}">Rensa endast anställda </paper-button>
+            </paper-action-dialog>
             <paper-action-dialog id="deleteEmployeeDialog" heading="Radera anställd?"
                                  transition="core-transition-top" layered="true"
                                  backdrop="true" closeSelector="[dismissive]">
@@ -55,7 +64,7 @@
                 <paper-button dismissive default>Avbryt</paper-button>
                 <paper-button id="deleteShiftButton" affirmative>Radera</paper-button>
             </paper-action-dialog>
-            <paper-action-dialog id="editEmployeeDialog" heading="Redigera anställd"
+            <paper-action-dialog id="editEmployeeDialog" heading="Ändra anställd"
                                  transition="core-transition-top" layered="true"
                                  backdrop="true" closeSelector="[dismissive]"
                                  autoCloseDisabled="true">
@@ -75,6 +84,24 @@
                     <paper-button on-click="{{randomizeEmployeeColor}}" style="background-color: {{employee.bgColor}}">Ändra färg</paper-button>
                     <paper-button dismissive default>Avbryt</paper-button>
                     <paper-button id="saveEmployeeButton" affirmative on-click="{{saveEmployeeChanges}}">Spara</paper-button>
+                </template>
+            </paper-action-dialog>
+            <paper-action-dialog id="editShiftDialog" heading="Ändra tur"
+                                 transition="core-transition-top" layered="true"
+                                 backdrop="true" closeSelector="[dismissive]"
+                                 autoCloseDisabled="true">
+                <template bind="{{editedShift as shift}}">
+                    <paper-input-decorator label="Kod" floatingLabel="true" style="display: block;" error="{{shift.codeError}}" focused>
+                        <input is="core-input" value="{{shift.code}}" on-blur="{{validateInput}}" data-type="shiftCode" autofocus>
+                    </paper-input-decorator>
+                    <paper-input-decorator label="Starttid" floatingLabel="true" style="display: block;" error="{{shift.startTimeError}}">
+                        <input is="core-input" value="{{shift.startTimeText}}" on-blur="{{validateInput}}" data-type="shiftStartTime">
+                    </paper-input-decorator>
+                    <paper-input-decorator label="Sluttid" floatingLabel="true" style="display: block;" error="{{shift.endTimeError}}">
+                        <input is="core-input" value="{{shift.endTimeText}}" on-blur="{{validateInput}}" data-type="shiftEndTime">
+                    </paper-input-decorator>
+                    <paper-button dismissive default>Avbryt</paper-button>
+                    <paper-button id="saveShiftButton" affirmative on-click="{{saveShiftChanges}}">Spara</paper-button>
                 </template>
             </paper-action-dialog>
         </div>
@@ -98,7 +125,7 @@
     <script>
         (function() {
             'use strict';
-            var NUMBER_OF_MINUTES_IN_A_DAY = 1440;
+            var MINUTES_IN_A_DAY = 1440;
             var MINUTES_IN_AN_HOUR = 60;
             var toTwoDecimals = function(num) {
                 return Math.round(num * 100) / 100; //at most 2 decimals
@@ -232,7 +259,7 @@
                         if (shift.endTime > shift.startTime) {
                             minutes = minutes + shift.endTime - shift.startTime;
                         } else {
-                            minutes = minutes + shift.endTime + NUMBER_OF_MINUTES_IN_A_DAY - shift.startTime;
+                            minutes = minutes + shift.endTime + MINUTES_IN_A_DAY - shift.startTime;
                         }
                     }
                 });
@@ -252,6 +279,31 @@
                     });
                 });
                 return shifts;
+            };
+
+            Schedule.prototype.getShiftsByCode = function(code) {
+                var shifts = [];
+
+                this.weekSchedules.forEach( function (weekSchedule) {
+                    weekSchedule.shifts.forEach( function (shift) {
+                        if (shift.code === code && shifts.indexOf(shift) === -1) {
+                            shifts.push(shift);
+                        }
+                    });
+                });
+                return shifts;
+            };
+
+            Schedule.prototype.getEmployeeByCode = function(code) {
+                return this.employees.filter( function(employee) {
+                    return employee.code === code;
+                })[0];
+            };
+
+            Schedule.prototype.getShiftDefinitionByCode = function(code) {
+                return this.shiftDefinitions.filter( function (shiftDef) {
+                    return shiftDef.code === code;
+                })[0];
             };
 
             Schedule.prototype.getEmployeeShifts = function (employee) {
@@ -364,7 +416,7 @@
                     //shift spans over two days
                     if (this.dayOfWeek === dayOfWeek) {
                         //use first time of shift (i.e. 22:00-[00:00])
-                        endTime = NUMBER_OF_MINUTES_IN_A_DAY;
+                        endTime = MINUTES_IN_A_DAY;
                     } else {
                         //use second time of shift (i.e. 00:00-[06:00])
                         endTime = this.endTime;
@@ -752,6 +804,39 @@
             var removeShiftEventListeners = [];
 
             Polymer('one-schedule', {
+                clearPlaced: function (e) {
+                    this.$.clearPlacedDialog.toggle();
+                },
+                clearPlacedShifts: function (e) {
+                    this.schedule.weekSchedules.forEach( function (weekSchedule) {
+                        weekSchedule.shifts.splice(0, weekSchedule.shifts.length);
+                    });
+                    this.$.clearPlacedDialog.close();
+                },
+                clearPlacedEmployees: function (e) {
+                    var shifts = this.schedule.getAllShifts();
+                    shifts.forEach( function (shift) {
+                        shift.employees.splice(0, shift.employees.length);
+                        this.forceShiftUpdate(shift);
+                    },this);
+                    this.$.clearPlacedDialog.close();
+                },
+                minutesToHHMMString: function (minutes) {
+                    var HHMMString,
+                            hourPart = Math.floor(parseInt(minutes, 10) / MINUTES_IN_AN_HOUR), //make sure integer, truncate due to no integer division in javascript
+                            minutePart = parseInt(minutes, 10) % MINUTES_IN_AN_HOUR; //make sure integer, modulus to get hours
+
+                    //add leading zero if necessary
+                    if (hourPart < 10)
+                        hourPart = "0" + hourPart;
+                    if (minutePart < 10)
+                        minutePart = "0" + minutePart;
+
+                    //format as "HH:MM" string
+                    HHMMString = hourPart + ":" + minutePart;
+
+                    return HHMMString;
+                },
                 randomizeEmployeeColor: function() {
                     var c1 = 255;
                     var c2 = Math.floor((Math.random() * 120) + 175);
@@ -768,13 +853,18 @@
                 },
                 validateInput: function(event, detail, sender) {
                     if (!sender.attributes['data-type']) return;
+
+                    var code, hours, minutes, startTime, endTime, name, wwh, ep, startTimeText, endTimeText;
+
                     var type = sender.attributes['data-type'].value;
+
                     var decorator = sender.parentNode;
+
                     decorator.isInvalid = false;
 
                     switch(type) {
                         case "employeeName":
-                            var name = this.editedEmployee.name;
+                            name = this.editedEmployee.name;
                             name = name.trim();
                             if (name.length < 1) {
                                 this.editedEmployee.nameError = "namn måste anges";
@@ -788,7 +878,7 @@
                             }
                             break;
                         case "employeeCode":
-                            var code = this.editedEmployee.code;
+                            code = this.editedEmployee.code;
                             code = code.trim();
                             if (code.length < 1) {
                                 this.editedEmployee.codeError = "kod måste anges";
@@ -799,10 +889,13 @@
                             } else if (code.length > 5) {
                                 this.editedEmployee.codeError = "koden är för lång";
                                 decorator.isInvalid = true;
+                            } else if (code !== this.editedEmployee.oldCode && this.schedule.getEmployeeByCode(code)) {
+                                this.editedEmployee.codeError = "koden används redan";
+                                decorator.isInvalid = true;
                             }
                             break;
                         case "employeeWeekWorkHours":
-                            var wwh = String(this.editedEmployee.weekWorkHours);
+                            wwh = String(this.editedEmployee.weekWorkHours);
                             wwh = wwh.trim();
                             //if "," is used as decimal character, change it to "."
                             if (wwh.match(/,/g) && wwh.match(/,/g).length === 1) {
@@ -821,7 +914,7 @@
                             }
                             break;
                         case "employeeEmploymentPercentage":
-                            var ep = String(this.editedEmployee.employmentPercentage);
+                            ep = String(this.editedEmployee.employmentPercentage);
                             ep = ep.trim();
                             if (ep.match(/,/g) && ep.match(/,/g).length === 1) {
                                 ep = ep.replace(',', '.');
@@ -838,14 +931,97 @@
                                 }
                             }
                             break;
+                        case "shiftCode":
+                            code = this.editedShift.code;
+                            code = code.trim();
+                            if (code.length < 1) {
+                                this.editedShift.codeError = "kod måste anges";
+                                decorator.isInvalid = true;
+                            } else if (!code.match(/^[a-zA-ZåäöÅÄÖ][a-zA-ZåäöÅÄÖ0-9\-]*$/)) { //only allow -,a-ö and 0-9, not starting with - or digit
+                                this.editedShift.codeError = "inte en giltig kod";
+                                decorator.isInvalid = true;
+                            } else if (code.length > 5) {
+                                this.editedShift.codeError = "koden är för lång";
+                                decorator.isInvalid = true;
+                            } else if (code !== this.editedShift.oldCode && this.schedule.getShiftDefinitionByCode(code)) {
+                                this.editedShift.codeError = "koden används redan";
+                                decorator.isInvalid = true;
+                            }
+                            break;
+                        case "shiftStartTime":
+                            startTimeText = this.editedShift.startTimeText;
+                            startTimeText = startTimeText.replace(/\D/g, '');
+                            startTimeText = startTimeText.substr(0, 4);
+                            if (startTimeText.length === 0) {
+                                this.editedShift.startTimeError = "starttid måste anges";
+                                decorator.isInvalid = true;
+                            } else if (startTimeText.length <= 2) {
+                                hours = parseInt(startTimeText);
+                                if (hours < 0 || hours > 23) {
+                                    this.editedShift.startTimeError = "tidsangivelsen kan inte tolkas";
+                                    decorator.isInvalid = true;
+                                } else {
+                                    startTime = hours * MINUTES_IN_AN_HOUR;
+                                }
+                            } else {
+                                hours = parseInt(startTimeText.substr(0, startTimeText.length - 2));
+                                minutes = parseInt(startTimeText.substr(startTimeText.length - 2, 2));
+                                if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+                                    this.editedShift.startTimeError = "tidsangivelsen kan inte tolkas";
+                                    decorator.isInvalid = true;
+                                } else {
+                                    startTime = hours * MINUTES_IN_AN_HOUR + minutes;
+                                }
+                            }
+                            if (!decorator.isInvalid) {
+                                this.editedShift.startTime = startTime;
+                                this.editedShift.startTimeText = this.minutesToHHMMString(startTime);
+                                this.editedShift.endTimeText = this.editedShift.endTimeText.replace(" (nästa dag)", "");
+                                if (this.editedShift.startTime >= this.editedShift.endTime) {
+                                    this.editedShift.endTimeText = this.editedShift.endTimeText + " (nästa dag)";
+                                }
+                            }
+                            break;
+                        case "shiftEndTime":
+                            endTimeText = this.editedShift.endTimeText;
+                            endTime;
+                            endTimeText = endTimeText.replace(/\D/g, '');
+                            endTimeText = endTimeText.substr(0, 4);
+                            if (endTimeText.length === 0) {
+                                this.editedShift.endTimeError = "sluttid måste anges";
+                                decorator.isInvalid = true;
+                            } else if (endTimeText.length <= 2) {
+                                hours = parseInt(endTimeText);
+                                if (hours < 0 || hours > 23) {
+                                    this.editedShift.endTimeError = "tidsangivelsen kan inte tolkas";
+                                    decorator.isInvalid = true;
+                                } else {
+                                    endTime = hours * MINUTES_IN_AN_HOUR;
+                                }
+                            } else {
+                                hours = parseInt(endTimeText.substr(0, endTimeText.length - 2));
+                                minutes = parseInt(endTimeText.substr(endTimeText.length - 2, 2));
+                                if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+                                    this.editedShift.endTimeError = "tidsangivelsen kan inte tolkas";
+                                    decorator.isInvalid = true;
+                                } else {
+                                    endTime = hours * MINUTES_IN_AN_HOUR + minutes;
+                                }
+                            }
+                            if (!decorator.isInvalid) {
+                                this.editedShift.endTime = endTime;
+                                this.editedShift.endTimeText = this.minutesToHHMMString(endTime);
+                                if (this.editedShift.startTime >= this.editedShift.endTime) {
+                                    this.editedShift.endTimeText = this.editedShift.endTimeText + " (nästa dag)";
+                                }
+                            }
+                            break;
                         default:
                     }
                 },
                 editEmployee: function(e) {
                     var employee = this.schedule.employees.filter( function (empData) {
-                        var match = false;
-                        match = (e.target.employee && e.target.employee.code === empData.code);
-                        return match;
+                        return (e.target.employee && e.target.employee.code === empData.code);
                     })[0];
                     if (employee) {
                         this.editedEmployee = JSON.parse(JSON.stringify(employee)); //not wanting to alter the original object here
@@ -854,6 +1030,53 @@
                         this.editedEmployee = new Employee();
                     }
                     this.$.editEmployeeDialog.toggle();
+                },
+                editShift: function(e) {
+                    var shiftDef = this.schedule.shiftDefinitions.filter( function (shiftDef) {
+                        return (e.target.shift === shiftDef);
+                    })[0];
+                    if (shiftDef) {
+                        this.editedShift = JSON.parse(JSON.stringify(shiftDef));
+                        this.editedShift.startTimeText = this.minutesToHHMMString(this.editedShift.startTime) || "";
+                        this.editedShift.endTimeText = this.minutesToHHMMString(this.editedShift.endTime) || "";
+                        this.editedShift.oldCode = shiftDef.code;
+                    } else {
+                        this.editedShift = new ShiftDefinition({startTimeText:"07:00", endTimeText:"16:00"});
+                    }
+                    this.$.editShiftDialog.toggle();
+                },
+                saveShiftChanges: function(e) {
+                    var fields = this.$.editShiftDialog.querySelectorAll("paper-input-decorator");
+                    var isValidated = true;
+                    for (var i = 0; i < fields.length; i++) {
+                        isValidated = (fields[i].isInvalid) ? false : isValidated;
+                    }
+
+                    if (isValidated === true) {
+                        var oldCode = this.editedShift.oldCode;
+                        var shiftDef = this.schedule.shiftDefinitions.filter( function(shiftDef) {
+                            return shiftDef.code === oldCode;
+                        })[0];
+                        if (!shiftDef) {
+                            shiftDef = new ShiftDefinition();
+                            this.schedule.shiftDefinitions.push(shiftDef);
+                        }
+                        shiftDef.code = this.editedShift.code;
+                        shiftDef.startTime = this.editedShift.startTime;
+                        shiftDef.endTime = this.editedShift.endTime;
+
+                        var shifts = this.schedule.getShiftsByCode(oldCode);
+                        shifts.forEach( function(shift) {
+                            shift.startTime = shiftDef.startTime;
+                            shift.endTime = shiftDef.endTime;
+                            shift.code = shiftDef.code;
+                            this.forceShiftUpdate(shift);
+                        },this);
+
+                        this.update++;
+                        this.adjustShiftWidths();
+                        this.$.editShiftDialog.close();
+                    }
                 },
                 saveEmployeeChanges: function(e) {
                     var fields = this.$.editEmployeeDialog.querySelectorAll("paper-input-decorator");
@@ -886,15 +1109,6 @@
 
                         this.$.editEmployeeDialog.close();
                     }
-                },
-                editShift: function(e) {
-
-                },
-                newEmployee: function(e) {
-
-                },
-                newShift: function(e) {
-
                 },
                 returnEmptyString: function (str) {
                     return "";
