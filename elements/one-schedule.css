@@ -80,6 +80,10 @@ paper-button {
     min-width: 20px;
 }
 
+paper-button#printButton {
+    float:right;
+}
+
 .selectContainer {
     display: block;
     width: 30%;
@@ -150,5 +154,8 @@ paper-button {
     }
     html [flex] {
         flex: 0 0 0 !important;
+    }
+    paper-button#printButton {
+        visibility: hidden;
     }
 }

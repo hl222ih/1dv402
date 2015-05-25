@@ -21,7 +21,6 @@
                     <paper-button raised>Logga&nbsp;in</paper-button>
                     <paper-button raised>Spara</paper-button>
                     <paper-button raised style="clear: none;" on-click="{{clearPlaced}}">Rensa</paper-button>
-                    <paper-button raised onclick="window.print()">Skriv&nbsp;ut</paper-button>
                 </div>
                 <div id="employeeSelectContainer" class="selectContainer">
                     <template repeat="{{employee in schedule.employees}}">
@@ -37,9 +36,10 @@
                 </div>
             </div>
             <div flex id="scheduleContainer" style="margin: 1%; width: 98%; maxHeight: 200px">
-                <paper-slider id="paperSlider" min="200" max="900" value="[[pxWeekWidth]]" immediateValue="{{pxWeekWidth}}"></paper-slider>
+                <paper-button id="printButton" raised onclick="window.print()">Skriv&nbsp;ut</paper-button>
+                <paper-slider id="paperSlider" min="140" max="900" value="[[pxWeekWidth]]" immediateValue="{{pxWeekWidth}}"></paper-slider>
                 <template repeat="{{weekSchedule, index in schedule.weekSchedules}}">
-                    <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekWidth * 220 / 420 / 1}}" weekNumber="{{index + 1}}" layout="{{schedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
+                    <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekHeight}}" weekNumber="{{index + 1}}" layout="{{schedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
                 </template>
             </div>
             <paper-action-dialog id="clearPlacedDialog" heading="Rensa?"
@@ -108,8 +108,6 @@
         <core-splitter id="splitter" direction="left" allowOverflow="true"></core-splitter>
         <div flex id="infoContainer" style="font-family: 'Trebuchet MS', Helvetica, sans-serif; overflow-y: auto;">
             <template repeat="{{employee, index in schedule.employees}}">
-                <core-range min="0" max="100" value="{{employee.percentagePlanned}}" ratio="50"></core-range>
-                <div class="progress-bar"  style="width: 50%;"></div>
                 <div on-click="{{toggle}}" style="padding: 1px; padding-left: 5px; border: 1px solid #dedede">
                     {{employee.name}} ({{employee.code}})<!-- (No o s: {{schedule.numberOfShifts}})-->
                 </div>
@@ -518,7 +516,7 @@
             var schedulesData = [
                         {
                             name: "Schema 1",
-                            numberOfWeeks: 4,
+                            numberOfWeeks: 16,
                             employeesCodes: ["AA", "BB", "CC", "DD", "EE", "FF", "GG", "HH", "II", "JJ", "KK", "LL", "MM", "NN", "OO", "PP"],
                             shiftDefinitions: [
                                 {
@@ -585,7 +583,7 @@
                                     employeeCodes: ["DD"],
                                     shiftCode: "N",
                                     workPlaceCode: "WP1",
-                                    weeks: [4],
+                                    weeks: [3],
                                     dayOfWeek: 7
                                 },
                                 {
@@ -1129,12 +1127,39 @@
                     this.schedule.updateEmployees();
                     this.schedule.updateShifts();
                 },
-                pxWeekWidth: 420,
+                pxWeekWidth: 0,
+                pxWeekHeight: 0,
                 schedule: {},
                 ready: function () {
                     this.populateSchedule("Schema 1"); //pick first for now
                 },
                 domReady: function() {
+                    var numWeeks = this.schedule.numberOfWeeks;
+                    var height = this.$.scheduleContainer.offsetHeight - 70;
+                    var width = this.$.scheduleContainer.offsetWidth - 70;
+
+                    if (numWeeks === 1) {
+                        this.pxWeekWidth = width;
+                        this.pxWeekHeight = height;
+                    } else if (numWeeks === 2) {
+                        this.pxWeekWidth = width / 2 - 5; //compensate for 10 extra px between weekSchedules
+                        this.pxWeekHeight = height;
+                    } else if (numWeeks === 3 || numWeeks === 4) {
+                        this.pxWeekWidth = width / 2 - 5;
+                        this.pxWeekHeight = height / 2 - 5;
+                    } else if (numWeeks >= 5 && numWeeks <= 6) {
+                        this.pxWeekWidth = width / 3 - 7;
+                        this.pxWeekHeight = height / 2 - 5;
+                    } else if (numWeeks >= 7 && numWeeks <= 9) {
+                        this.pxWeekWidth = width / 3 - 7;
+                        this.pxWeekHeight = height / 3 - 7;
+                    } else if (numWeeks >= 10 && numWeeks <= 12) {
+                        this.pxWeekWidth = width / 4 - 8;
+                        this.pxWeekHeight = height / 3 - 7;
+                    } else if (numWeeks >= 13 && numWeeks <= 16) {
+                        this.pxWeekWidth = width / 4 - 8;
+                        this.pxWeekHeight = height / 4 - 8;
+                    }
                     this.updated++;
                 },
                 populateSchedule: function(scheduleName) {

@@ -78,7 +78,7 @@
                         //added specialRelatedTarget = inEvent.currentTarget to var gestureProto = { ... } in polymer.js
                         //element inside the shadowDOM that initialized the drag-operation:
                         //added specialRelatedDownTarget = t.downTarget to var gestureProto = { ... } in polymer.js
-                        //dragInfo.dropTarget = dragInfo.event.specialRelatedTarget;
+                        //dragInfo.dropTarget = dragInfo.event.specialRelatedTarget; //doesn't work for shadowdom :(
 
                     };
                     dragInfo.drop = function (dragInfo) {
@@ -89,6 +89,8 @@
                                 dropTarget.classList.remove('dragShiftHover');
                             }
                         }
+
+                        dragInfo.dropTarget = dropTarget;
                         self.dragInfo = {};
                     };
                 },
