@@ -1474,26 +1474,15 @@
                             return (restTime.endTime - restTime.startTime) > 11 * MINUTES_IN_AN_HOUR;
                         });
 
-                        //console.log(shiftsInRestPeriod);
-                        //slutligen, för de turer som hör till samma dag som 24-timmarsperioden hör till,
-                        //sätts ett värde på ifall turen uppfyller villkoret om 11 timmars sammanhängande
-                        //dygnsvila eller ej till en egenskap på turen. Denna egenskap kan sedan användas i
-                        //schemaapplikationen för att uppmärksamma användaren på turer som kan medverka till
-                        //att kravet på dygnsvila inte uppfylls.
+                        //finally set shifts fulfills day rest constraint to false, if the current rest period
+                        //does not contain 11 hours rest.
                         shiftsInRestPeriod.forEach( function (shift) {
                             if (!hasDayRestPeriod) {
-                                //console.log("hdrp:" + hasDayRestPeriod);
                                 shift.fulfillsDayRestConstraint = false;
 
                             }
                         });
                     }
-
-                    /*this.schedule.weekSchedules.forEach( function (weekSchedule) {
-                        weekSchedule.shifts.forEach( function (shift) {
-                            this.forceShiftUpdate(shift);
-                        },this)
-                    },this)*/
                 },
                 forceShiftsUpdateForAllEmployees: function() {
                     //presuppose shifts fullfills day rest constraint
