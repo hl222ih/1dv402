@@ -10,6 +10,8 @@
 <link rel="import" href="../bower_components/core-range/core-range.html"/>
 <link rel="import" href="../bower_components/paper-dialog/paper-action-dialog.html"/>
 <link rel="import" href="../bower_components/paper-input/paper-input-decorator.html"/>
+<link rel="import" href="../bower_components/core-selector/core-selector.html"/>
+<link rel="import" href="../bower_components/core-icons/core-icons.html">
 
 <polymer-element unresolved name="one-schedule" horizontal layout>
     <template>
@@ -18,9 +20,12 @@
             <div id="headerContainer" style="display: block; width: 98%; max-height: 10%;">
                 <one-delete id="oneDelete" dragInfo="{{dragInfo}}"></one-delete>
                 <div id="scheduleSelectContainer" class="selectContainer">
-                    <paper-button raised>Logga&nbsp;in</paper-button>
-                    <paper-button raised>Spara</paper-button>
-                    <paper-button raised style="clear: none;" on-click="{{clearPlaced}}">Rensa</paper-button>
+                    <paper-button raised>Logga&nbsp;in</paper-button><!--om ej inloggad-->
+                    <paper-button raised>Spara</paper-button><!--om schema är laddat-->
+                    <paper-button raised style="clear: none;" on-click="{{clearPlaced}}">Rensa</paper-button><!--om schema är laddat-->
+                    <paper-button raised on-click="{{editSettings}}">Inställningar</paper-button><!--om schema är laddat-->
+                    <paper-button raised>Tidigare version</paper-button><!--om schema är laddat-->
+                    <paper-button raised on-click="{{openLoadScheduleDialog}}">Ladda schema</paper-button>
                 </div>
                 <div id="employeeSelectContainer" class="selectContainer">
                     <template repeat="{{employee in schedule.employees}}">
@@ -42,6 +47,13 @@
                     <one-week id="oneWeek" data="{{weekSchedule}}" pxWidth="{{pxWeekWidth}}" pxHeight="{{pxWeekHeight}}" weekNumber="{{index + 1}}" layout="{{schedule.weekSchedules.length}}" dragInfo="{{dragInfo}}"></one-week>
                 </template>
             </div>
+            <paper-action-dialog id="editSettingsDialog" heading="Rensa?"
+                                 transition="core-transition-top" layered="true"
+                                 backdrop="true" closeSelector="[dismissive]">
+                <p>Hmm</p>
+                <paper-button dismissive default>Avbryt</paper-button>
+                <paper-button id="editScheduleButton" affirmative on-click="{{clearPlacedEmployees}}">Skapa schema</paper-button>
+            </paper-action-dialog>
             <paper-action-dialog id="clearPlacedDialog" heading="Rensa?"
                                  transition="core-transition-top" layered="true"
                                  backdrop="true" closeSelector="[dismissive]">
@@ -104,14 +116,41 @@
                     <paper-button id="saveShiftButton" affirmative on-click="{{saveShiftChanges}}">Spara</paper-button>
                 </template>
             </paper-action-dialog>
+            <paper-action-dialog id="loadScheduleDialog" heading="Ladda schema"
+                                 transition="core-transition-top" layered="true"
+                                 backdrop="true" closeSelector="[dismissive]"
+                                 autoCloseDisabled="true" style="min-width: 30%">
+                    <core-selector id="scheduleSelector" valueattr="label" selectedClass="core-selected">
+                        <template repeat="{{scheduleName in scheduleNames}}">
+                            <div on-click="{{selectSchedule}}" label="{{scheduleName}}">{{scheduleName}}</div>
+                        </template>
+                    </core-selector>
+                <paper-button dismissive default>Avbryt</paper-button>
+                <paper-button id="loadScheduleButton" affirmative on-click="{{loadSchedule}}">Ladda schema</paper-button>
+            </paper-action-dialog>
+
         </div>
         <core-splitter id="splitter" direction="left" allowOverflow="true"></core-splitter>
         <div flex id="infoContainer" style="font-family: 'Trebuchet MS', Helvetica, sans-serif; overflow-y: auto;">
             <template repeat="{{employee, index in schedule.employees}}">
-                <div on-click="{{toggle}}" style="padding: 1px; padding-left: 5px; border: 1px solid #dedede">
-                    {{employee.name}} ({{employee.code}})<!-- (No o s: {{schedule.numberOfShifts}})-->
+                <div on-click="{{toggle}}" style="padding: 1px; padding-left: 5px; border: 1px solid #dedede; background-color: {{employee.bgColor}}">
+                    {{employee.name}} ({{employee.code}})
+                    <template if="{{employee.hoursPlanned < employee.lowerDeviationLimit}}">
+                        <core-icon style="background-color: greenyellow" icon="expand-less"></core-icon>
+                    </template>
+                    <template if="{{employee.hoursPlanned >= employee.lowerDeviationLimit && employee.leftToPlan > 0}}">
+                        <core-icon style="background-color: yellow" icon="expand-less"></core-icon>
+                    </template>
+                    <template if="{{employee.hoursPlanned <= employee.upperDeviationLimit && employee.leftToPlan < 0}}">
+                        <core-icon style="background-color: yellow" icon="expand-more"></core-icon>
+                    </template>
+                    <template if="{{employee.hoursPlanned > employee.upperDeviationLimit}}">
+                        <core-icon style="background-color: orangered" icon="expand-more"></core-icon>
+                    </template>
+                    {{employee.leftToPlan}}
                 </div>
                 <core-collapse style="padding-left: 2px; font-size: 10px;">
+                    <div>Timmar kvar att lägga ut: {{employee.leftToPlan}}</div>
                     <div>Utlagda timmar: {{employee.hoursPlanned}} (av {{employee.totalHours}})</div>
                     <div>Utlagd procent: {{employee.percentagePlanned}} % (av {{employee.employmentPercentage}} %)</div>
                     <div>Utlagda turer: {{employee.numberOfShifts}} ( {{employee.hoursPerShift}} timmar / tur)</div>
@@ -125,6 +164,7 @@
             'use strict';
             var MINUTES_IN_A_DAY = 1440;
             var MINUTES_IN_AN_HOUR = 60;
+            var DAYS_IN_A_WEEK = 7;
             var toTwoDecimals = function(num) {
                 return Math.round(num * 100) / 100; //at most 2 decimals
             };
@@ -181,7 +221,7 @@
                         }
                     }
                 }, this);
-
+                this.breakPointTime = 20.5 * MINUTES_IN_AN_HOUR; //todo: allow user to set schedule's break point time
             }
 
             function Shift(shiftData) {
@@ -200,6 +240,7 @@
                 this.numberOfShiftsWideForSecond = 1; //not settable on creation (if shift spans over two days, this is the part for day 2)
                 this.positionForFirst = 1; //not settable on creation (if width is 3, 1 means to the left, 2 in the middle, 3 to the right of available width)
                 this.positionForSecond = 1; //not settable on creation (if shift spans over two days, this is the position for the part of the shift on day 2)
+                this.fulfillsDayRestConstraint = true;
             }
 
             function ShiftDefinition(shiftDefinitionData) {
@@ -220,12 +261,20 @@
 
             Schedule.prototype.updateEmployees = function() {
                 this.employees.forEach( function(employee) {
-                    employee.totalHours = toTwoDecimals(this.getEmployeeTotalHours(employee));
+                    var totalHours = this.getEmployeeTotalHours(employee);
+                    employee.totalHours = toTwoDecimals(totalHours);
                     employee.percentagePlanned = toTwoDecimals(this.getEmployeePercentagePlanned(employee));
                     var hoursPlanned = this.getEmployeeHoursPlanned(employee);
                     employee.hoursPlanned = toTwoDecimals(hoursPlanned);
                     employee.numberOfShifts = this.getEmployeeNumberOfShifts(employee);
                     employee.hoursPerShift = employee.numberOfShifts > 0 ? toTwoDecimals(hoursPlanned/employee.numberOfShifts) : "-";
+                    var leftToPlan = totalHours - this.numberOfWeeks * 1.5 - hoursPlanned; //todo: add "1.5" as schedule setting
+                    employee.leftToPlan = toTwoDecimals(leftToPlan);
+                    var allowedDeviationHoursPerWeek = 1.0; //todo: add as schedule setting
+                    var allowedDeviationHours = this.numberOfWeeks * allowedDeviationHoursPerWeek;
+                    employee.upperDeviationLimit = totalHours - this.numberOfWeeks * 1.5 + allowedDeviationHours;
+                    employee.lowerDeviationLimit = totalHours - this.numberOfWeeks * 1.5 - allowedDeviationHours;
+                    employee.hasOwnBreakPoint = false; //todo: allow employee to have own break point time
                 }, this);
             };
 
@@ -272,7 +321,8 @@
                 this.weekSchedules.forEach( function (weekSchedule) {
                     weekSchedule.shifts.forEach( function (shift) {
                         if (shifts.indexOf(shift) === -1) {
-                            shifts = shifts.concat(weekSchedule.shifts);
+                            shifts.push(shift);
+                            //shifts = shifts.concat(weekSchedule.shifts);
                         }
                     });
                 });
@@ -288,6 +338,19 @@
                             shifts.push(shift);
                         }
                     });
+                });
+                return shifts;
+            };
+
+            Schedule.prototype.getShiftsByEmployee = function (employee) {
+                var shifts = [];
+
+                this.weekSchedules.forEach( function (weekSchedule) {
+                    weekSchedule.shifts.forEach( function (shift) {
+                        if (shift.employees.indexOf(employee) !== -1 && shifts.indexOf(shift) === -1) {
+                            shifts.push(shift);
+                        }
+                    })
                 });
                 return shifts;
             };
@@ -340,7 +403,7 @@
                 var isDeleted = false;
 
                 this.weekSchedules.forEach( function (weekSchedule) {
-                    var indexOfShift = weekSchedule.shifts.indexOf(shift)
+                    var indexOfShift = weekSchedule.shifts.indexOf(shift);
                     if (indexOfShift !== -1) {
                         weekSchedule.shifts.splice(indexOfShift, 1);
                         isDeleted = true;
@@ -483,13 +546,14 @@
                         clone[i] = this[i];
                     }
                 }
+
                 return clone;
             };
 
             Shift.prototype.deleteEmployee = function(employee) {
                 var isDeleted = false;
 
-                var indexOfEmployee = this.employees.indexOf(employee)
+                var indexOfEmployee = this.employees.indexOf(employee);
 
                 if (indexOfEmployee !== -1) {
                     this.employees.splice(indexOfEmployee, 1);
@@ -552,10 +616,10 @@
                             ],
                             shifts: [
                                 {
-                                    employeeCodes: ["AA"],
+                                    employeeCodes: ["CC"],
                                     shiftCode: "A1",
                                     workplaceCode: "WP1",
-                                    weeks: [1],
+                                    weeks: [1,2],
                                     dayOfWeek: 1
                                 },
                                 {
@@ -1029,7 +1093,7 @@
                     }
                     this.$.editEmployeeDialog.toggle();
                 },
-                editShift: function(e) {
+                editShift: function (e) {
                     var shiftDef = this.schedule.shiftDefinitions.filter( function (shiftDef) {
                         return (e.target.shift === shiftDef);
                     })[0];
@@ -1042,6 +1106,26 @@
                         this.editedShift = new ShiftDefinition({startTimeText:"07:00", endTimeText:"16:00"});
                     }
                     this.$.editShiftDialog.toggle();
+                },
+                scheduleNames: [],
+                selectSchedule: function(e) {
+                //    this.$.scheduleSelector.selected = "Schema 1";
+
+                  //  alert("selected");
+                },
+                openLoadScheduleDialog: function(e) {
+                    this.$.loadScheduleDialog.toggle();
+                },
+                loadSchedule: function(e) {
+                    var scheduleReference = this.$.scheduleSelector.selected;
+                    this.populateSchedule(scheduleReference);
+                    this.schedule.updateEmployees();
+                    this.$.loadScheduleDialog.close();
+                },
+                editSettings: function (e) {
+                    this.editedSettings = {};
+                    this.editedSettings.name = this.schedule.name || "schema " + new Date().toLocaleString("sv-SE");
+                    //alert(this.editedSettings.name);
                 },
                 saveShiftChanges: function(e) {
                     var fields = this.$.editShiftDialog.querySelectorAll("paper-input-decorator");
@@ -1100,11 +1184,12 @@
                         if (employee.bgColor !== this.editedEmployee.bgColor) {
                             employee.bgColor = this.editedEmployee.bgColor;
                             var shifts = this.schedule.getEmployeeShifts(employee);
-                            shifts.forEach( function(shift) {
-                                this.forceShiftUpdate(shift);
-                            },this);
                         }
-
+                        this.schedule.updateEmployees();
+                        this.forceShiftsUpdate(); //todo: some odd bug here. Updating shifts background-color every second time, for some shifts but not others.
+                        this.forceShiftsUpdate(); //repeating this several times (2 is not enough) will give the desired result, but the problem is somewhere, updating many times should not be necessary
+                        this.forceShiftsUpdate();
+                        this.forceShiftsUpdate();
                         this.$.editEmployeeDialog.close();
                     }
                 },
@@ -1134,8 +1219,9 @@
                     this.populateSchedule("Schema 1"); //pick first for now
                 },
                 domReady: function() {
+                    this.scheduleNames = ["Schema 1", "Schema 2", "Granvägen 14, Sommarschema -15", "Granvägen 14, Huvudschema oktober -14"];
                     var numWeeks = this.schedule.numberOfWeeks;
-                    var height = this.$.scheduleContainer.offsetHeight - 70;
+                    var height = this.$.scheduleContainer.offsetHeight - 90;
                     var width = this.$.scheduleContainer.offsetWidth - 70;
 
                     if (numWeeks === 1) {
@@ -1172,6 +1258,7 @@
                     this.schedule = new Schedule(scheduleData);
 
                     this.adjustShiftWidths();
+                    this.forceShiftsUpdateForAllEmployees();
                 },
                 adjustShiftWidths: function () {
                     for (var currentWeekIndex = 0; currentWeekIndex < this.schedule.weekSchedules.length; currentWeekIndex++) {
@@ -1233,11 +1320,7 @@
                                             if (shift === currentShift) return false;
                                             var otherShiftPosition = shift.getPosition(dayOfWeek);
                                             var isColliding = (otherShiftPosition === shiftPosition && currentShifts.indexOf(currentShift) > currentShifts.indexOf(shift));
-                                            if (isColliding) {
-                                                return true;
-                                            } else {
-                                                return false;
-                                            }
+                                            return isColliding;
                                         });
                                         if (spaceCollidingShifts.length === 0) {
                                             spaceFound = true;
@@ -1260,20 +1343,21 @@
                 },
                 dragInfo: {},
                 dragInfoChanged: function(oldValue, newValue) {
+                    var i, buttons;
                     if (Object.keys(this.dragInfo).length === 0) { //check if this.dragInfo is an empty object (no object is dragged -> cursor should be visible)
                         this.style.cursor = "default";
                         this.$.paperSlider.style.cursor = "default";
 
-                        var buttons = this.shadowRoot.querySelectorAll("paper-button");
-                        for (var i = 0; i < buttons.length; i++) {
+                        buttons = this.shadowRoot.querySelectorAll("paper-button");
+                        for (i = 0; i < buttons.length; i++) {
                             buttons[i].style.cursor = "pointer";
                         }
                     } else {
                         this.style.cursor = "none";
                         this.$.paperSlider.style.cursor = "none";
 
-                        var buttons = this.shadowRoot.querySelectorAll("paper-button");
-                        for (var i = 0; i < buttons.length; i++) {
+                        buttons = this.shadowRoot.querySelectorAll("paper-button");
+                        for (i = 0; i < buttons.length; i++) {
                             buttons[i].style.cursor = "none";
                         }
                     }
@@ -1304,6 +1388,126 @@
                             weekSchedule.shifts.push(clonedShift);
                         }
                     });
+                },
+                forceShiftsUpdate: function() {
+                    this.schedule.weekSchedules.forEach( function (weekSchedule) {
+                        weekSchedule.shifts.forEach( function (shift) {
+                            this.forceShiftUpdate(shift);
+                        },this);
+                    },this)
+                },
+                forceShiftsUpdateForEmployee: function(employee) {
+                    var daysInSchedule = this.schedule.numberOfWeeks * DAYS_IN_A_WEEK;
+                    var schedule = this.schedule;
+                    var breakPointTime;
+                    if (employee.hasOwnBreakPoint === true) {
+                        breakPointTime = employee.breakPointTime;
+                    } else {
+                        breakPointTime = schedule.breakPointTime;
+                    }
+
+                    var shifts = schedule.getShiftsByEmployee(employee);
+
+                    //each day a new rest period is starting at the given breakPointTime. each rest period is 24 hours.
+                    //The goal is to find out if this rest period has an 11 hour long period without placed work for the employee.
+
+                    //Loop through each day in the schedule
+                    for (var dayRestPeriodDay = 1; dayRestPeriodDay <= daysInSchedule; dayRestPeriodDay++) {
+                        //get the shifts which fully or partly exist in the (24 hour) dayRestPeriod belonging to the dayRestPeriodDay
+                        var shiftsInRestPeriod = shifts.filter( function (shift) {
+                            var day = shift.dayOfWeek + (shift.week - 1) * DAYS_IN_A_WEEK;
+                            var isInRestPeriod = false;
+                            if ((dayRestPeriodDay === day && shift.startTime < shift.endTime && (shift.startTime >= breakPointTime || shift.endTime > breakPointTime || shift.endTime === 0)) ||
+                                    (dayRestPeriodDay === day - 1 && shift.startTime < shift.endTime && (shift.startTime < breakPointTime)) ||
+                                    (dayRestPeriodDay === day && shift.startTime >= shift.endTime && (shift.startTime < breakPointTime || shift.endTime <= breakPointTime))) {
+                                isInRestPeriod = true;
+                            }
+
+                            return isInRestPeriod;
+                        });
+
+                        if (shiftsInRestPeriod.length > 0) {
+                            console.log("restperiodday: " + dayRestPeriodDay);
+                            console.log(shiftsInRestPeriod);
+                        }
+
+                        //create the rest period of 24 hours for the current day...
+                        var restTimes = [];
+                        restTimes.push({ startTime: breakPointTime, endTime: breakPointTime + MINUTES_IN_A_DAY});
+
+                        //...and as placed shifts overlaps the rest period, split the rest period up and keep the periods with the periods which has not any placed work
+                        shiftsInRestPeriod.forEach( function (shift) {
+                            var day = shift.dayOfWeek + (shift.week - 1) * DAYS_IN_A_WEEK;
+                            //eftersom både 24-timmarsperioden och turerna kan spänna över två dygn
+                            //behöver turernas start- och sluttider eventuellt anpassas så att de
+                            //överensstämmer med motsvarande start- och sluttider för viloperioderna
+                            //inom 24-timmarsperioden.
+                            //todo: adjust report
+                            var shiftStartTime = shift.startTime;
+                            var shiftEndTime = shift.endTime > shift.startTime ? shift.endTime : shift.endTime + MINUTES_IN_A_DAY;
+                            if (day === dayRestPeriodDay + 1) {
+                                shiftStartTime += MINUTES_IN_A_DAY;
+                                shiftEndTime += MINUTES_IN_A_DAY;
+                            }
+                            var alteredRestTimes = [];
+
+                            restTimes.forEach( function (restTime) {
+                                if (shiftStartTime > restTime.startTime && shiftEndTime < restTime.endTime) {
+                                    alteredRestTimes.push({ startTime: restTime.startTime, endTime: shiftStartTime});
+                                    alteredRestTimes.push({ startTime: shiftEndTime, endTime: restTime.endTime});
+                                } else if (shiftStartTime <= restTime.startTime && shiftEndTime > restTime.startTime && shiftEndTime < restTime.endTime) {
+                                        alteredRestTimes.push({ startTime: shiftEndTime, endTime: restTime.endTime});
+                                } else if (shiftEndTime >= restTime.endTime && shiftStartTime < restTime.endTime && shiftStartTime > restTime.startTime) {
+                                        alteredRestTimes.push({ startTime: restTime.startTime, endTime: shiftStartTime});
+                                } else if (shiftStartTime <= restTime.startTime && shiftEndTime >= restTime.endTime) {
+                                    //do nothing
+                                } else {
+                                    alteredRestTimes.push(restTime);
+                                }
+                            });
+
+                            restTimes = alteredRestTimes;
+                        });
+
+                        //check if any of the rest periods contains 11 hours
+                        var hasDayRestPeriod = restTimes.some( function (restTime) {
+                            return (restTime.endTime - restTime.startTime) > 11 * MINUTES_IN_AN_HOUR;
+                        });
+
+                        //console.log(shiftsInRestPeriod);
+                        //slutligen, för de turer som hör till samma dag som 24-timmarsperioden hör till,
+                        //sätts ett värde på ifall turen uppfyller villkoret om 11 timmars sammanhängande
+                        //dygnsvila eller ej till en egenskap på turen. Denna egenskap kan sedan användas i
+                        //schemaapplikationen för att uppmärksamma användaren på turer som kan medverka till
+                        //att kravet på dygnsvila inte uppfylls.
+                        shiftsInRestPeriod.forEach( function (shift) {
+                            if (!hasDayRestPeriod) {
+                                //console.log("hdrp:" + hasDayRestPeriod);
+                                shift.fulfillsDayRestConstraint = false;
+
+                            }
+                        });
+                    }
+
+                    /*this.schedule.weekSchedules.forEach( function (weekSchedule) {
+                        weekSchedule.shifts.forEach( function (shift) {
+                            this.forceShiftUpdate(shift);
+                        },this)
+                    },this)*/
+                },
+                forceShiftsUpdateForAllEmployees: function() {
+                    //presuppose shifts fullfills day rest constraint
+                    this.schedule.weekSchedules.forEach( function (weekSchedule) {
+                        weekSchedule.shifts.forEach( function (shift) {
+                            shift.fulfillsDayRestConstraint = true;
+                        });
+                    });
+                    //check for day rest constraint and set shift's fulfillsDayRestConstraint to false for shifts
+                    //which have employee(s) which atleast one is not fulfilling day rest constraint
+                    this.schedule.employees.forEach( function (employee) {
+                        this.forceShiftsUpdateForEmployee(employee);
+                        console.log("checked employee:", employee.code);
+                    },this);
                 },
                 moveEmployee: function(dragInfo) {
                     var draggedFromShift,
@@ -1379,6 +1583,7 @@
                     }
                     this.updated++;
                     this.adjustShiftWidths();
+                    this.forceShiftsUpdateForAllEmployees(); //todo: probably just employees of the moved to or moved from shift needs to be updated.
                 },
                 moveShift: function(dragInfo) {
                     var draggedShift;
@@ -1479,6 +1684,7 @@
                     }
                     this.updated++;
                     this.adjustShiftWidths(); //recalculate the shifts' widths.
+                    this.forceShiftsUpdateForAllEmployees(); //todo: just employees of the moved shift needs to be updated. create such function.
                 },
                 disablePointerEventsForOneShifts: function() {
                     var els = document.querySelectorAll('* /deep/ #oneShift');

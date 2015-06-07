@@ -36,7 +36,7 @@
     #infoContainer, #scheduleContainer, #headerContainer {
         -webkit-filter: blur(0); /*needed for the blur on box-shadow*/
         box-shadow: 0 1px 0 rgba(255, 255, 255, .2), inset 0 4px 5px rgba(0, 0, 0, .2), inset 0 1px 0 rgba(0, 0, 0, .2), inset 0 -4px 5px rgba(255, 255, 255, 0.4);
-        background-color: #ffffed;
+        background-color: #eee;/*#ffffed;*/
     }
 }
 
@@ -76,7 +76,7 @@ paper-button {
     text-align: center;
     margin: 2px;
     padding: 0;
-    max-width: 80px;
+    max-width: 100px;
     min-width: 20px;
 }
 

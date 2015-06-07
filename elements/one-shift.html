@@ -2,12 +2,21 @@
 <link rel="import" href="one-employee.html"/>
 <link rel="import" href="../bower_components/core-drag-drop/core-drag-drop.html">
 <link rel="import" href="../bower_components/core-icons/core-icons.html">
+<link rel="import" href="../bower_components/core-tooltip/core-tooltip.html">
 
 <polymer-element name="one-shift" attributes="shift part pxDayHeight pxDayWidth dragInfo isPlaced" on-mouseup="{{mouseUpFromShift}}" on-mouseover="{{mouseOverShift}}" on-mouseout="{{mouseOutOfShift}}">
 
     <template>
         <link rel="stylesheet" href="one-shift.css" type="text/css">
-        <!-- conditionally: <core-icon id="errorIcon" icon="warning"></core-icon>-->
+        <template if="{{shift.constructor.name === 'Shift' && shift.fulfillsDayRestConstraint == false && shift.employees.length >= 1}}">
+            <div id="errorIconWrapper">
+                <core-icon id="errorIcon" icon="warning">
+                </core-icon>
+                <!--hides behind other elements, need to fix
+                <core-tooltip id="errorIconTooltip" label="dygnsvila" noarrow="true">
+                </core-tooltip>-->
+            </div>
+        </template>
         <core-drag-drop></core-drag-drop>
         <!--
             changed
@@ -88,9 +97,9 @@
                             if (dropTarget.classList) {
                                 dropTarget.classList.remove('dragShiftHover');
                             }
+                            dragInfo.dropTarget = dropTarget; //only if dropTarget is inside shadow dom.
                         }
 
-                        dragInfo.dropTarget = dropTarget;
                         self.dragInfo = {};
                     };
                 },
@@ -122,7 +131,7 @@
                         startTime = this.shift.startTime,
                         endTime = this.shift.endTime;
 
-                    if (startTime > endTime)
+                    if (startTime >= endTime)
                         minutes = endTime;
 
                     return minutes;

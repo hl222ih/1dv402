@@ -17,3 +17,11 @@ html, body {
     background-color: #fffff9;
 }
 
+body /deep/ .core-selected {
+    background-color: #ddd;
+}
+
+body /deep/ #scheduleSelector > div {
+    cursor: default;
+    display: block;
+}

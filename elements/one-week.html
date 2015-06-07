@@ -14,13 +14,13 @@
                 <!--night shifts are divided into two html-elements (who share shift object)-->
                 <template if="{{shift|shouldDisplayFirstElement}}">
                     <!--observe changes in shift.employees by including shift.employees in the expression -->
-                    <one-shift id="oneShift" part="first" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees && shift | bgColorFromShift}}"></one-shift>
+                    <one-shift id="oneShift" part="first" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift | bgColorFromShift}}"></one-shift>
                     <template if="{{shift|shouldDisplaySecondElementToo}}">
-                        <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees && shift | bgColorFromShift}}"></one-shift>
+                        <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift | bgColorFromShift}}"></one-shift>
                     </template>
                 </template>
                 <template if="{{shift|shouldDisplaySecondElementOnly}}">
-                    <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift.employees && shift | bgColorFromShift}}"></one-shift>
+                    <one-shift id="oneShift" part="second" index="{{index}}" shift="{{shift}}" pxDayHeight="{{pxHeight}}" pxDayWidth="{{pxDayWidth}}" dragInfo="{{dragInfo}}" style="background-color: {{ shift | bgColorFromShift}}"></one-shift>
                 </template>
             </template>
         </div>
@@ -51,7 +51,7 @@
                 shouldDisplaySecondElementToo: function(shift) {
                     //return true if...
                     //...shift is a night shift
-                    return shift.startTime > shift.endTime &&
+                    return shift.startTime >= shift.endTime &&
                         //...and oneWeek's weekNumber correspond to the week number given in the shift
                         this.weekNumber === shift.week &&
                         //...unless the day of week is 7 (then the second part of the shift belongs to another week)
@@ -60,7 +60,7 @@
                 shouldDisplaySecondElementOnly: function(shift) {
                     //return true if...
                     //...shift is a night shift
-                    return shift.startTime > shift.endTime &&
+                    return shift.startTime >= shift.endTime &&
                         //...and oneWeek's weekNumber doesn't correspond to the week number given in the shift (indicating the first part of the shift was a Sunday of another week)
                         this.weekNumber !== shift.week;
                 },
