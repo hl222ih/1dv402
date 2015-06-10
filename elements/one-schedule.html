@@ -20,11 +20,13 @@
             <div id="headerContainer" style="display: block; width: 98%; max-height: 10%;">
                 <one-delete id="oneDelete" dragInfo="{{dragInfo}}"></one-delete>
                 <div id="scheduleSelectContainer" class="selectContainer">
-                    <paper-button raised>Logga&nbsp;in</paper-button><!--om ej inloggad-->
-                    <paper-button raised>Spara</paper-button><!--om schema är laddat-->
+                    <!-- not implemented yet
+                    <paper-button raised>Logga&nbsp;in</paper-button> --om ej inloggad--
+                    <paper-button raised>Spara</paper-button> --om schema är laddat--
+                    -->
                     <paper-button raised style="clear: none;" on-click="{{clearPlaced}}">Rensa</paper-button><!--om schema är laddat-->
-                    <paper-button raised on-click="{{editSettings}}">Inställningar</paper-button><!--om schema är laddat-->
-                    <paper-button raised>Tidigare version</paper-button><!--om schema är laddat-->
+                    <!-- not implemented yet <paper-button raised on-click="{{editSettings}}">Inställningar</paper-button>--><!--om schema är laddat-->
+                    <!-- not implemented yet <paper-button raised>Tidigare version</paper-button>--><!--om schema är laddat-->
                     <paper-button raised on-click="{{openLoadScheduleDialog}}">Ladda schema</paper-button>
                 </div>
                 <div id="employeeSelectContainer" class="selectContainer">
@@ -221,7 +223,7 @@
                         }
                     }
                 }, this);
-                this.breakPointTime = 20.5 * MINUTES_IN_AN_HOUR; //todo: allow user to set schedule's break point time
+                this.breakPointTime = 7 * MINUTES_IN_AN_HOUR; //todo: allow user to set schedule's break point time
             }
 
             function Shift(shiftData) {
@@ -578,149 +580,245 @@
                 return employees;
             };
             var schedulesData = [
+                {
+                    name: "Testschema 1",
+                    numberOfWeeks: 4,
+                    employeesCodes: ["AA", "BB", "CC", "DD", "EE", "FF", "GG", "HH", "II", "JJ", "KK", "LL", "MM", "NN", "OO", "PP"],
+                    shiftDefinitions: [
                         {
-                            name: "Schema 1",
-                            numberOfWeeks: 16,
-                            employeesCodes: ["AA", "BB", "CC", "DD", "EE", "FF", "GG", "HH", "II", "JJ", "KK", "LL", "MM", "NN", "OO", "PP"],
-                            shiftDefinitions: [
-                                {
-                                    code: "A1", //07:00-16:00
-                                    startTime: 420,
-                                    endTime: 960
-                                },
-                                {
-                                    code: "A2",
-                                    startTime: 420,
-                                    endTime: 930
-                                },
-                                {
-                                    code: "C1", //10:30-21:15
-                                    startTime: 630,
-                                    endTime: 1275
-                                },
-                                {
-                                    code: "C2", //11-21
-                                    startTime: 660,
-                                    endTime: 1275
-                                },
-                                {
-                                    code: "N", //21:00-07:15
-                                    startTime: 1260,
-                                    endTime: 435
-                                },
-                                {
-                                    code: "Q1", //06:00-09:20
-                                    startTime: 360,
-                                    endTime: 560
-                                }
-                            ],
-                            shifts: [
-                                {
-                                    employeeCodes: ["CC"],
-                                    shiftCode: "A1",
-                                    workplaceCode: "WP1",
-                                    weeks: [1,2],
-                                    dayOfWeek: 1
-                                },
-                                {
-                                    employeeCodes: ["AA", "BB"],
-                                    shiftCode: "C1",
-                                    workplaceCode: "WP2",
-                                    weeks: [1,2],
-                                    dayOfWeek: 1
-                                },
-                                {
-                                    employeeCodes: [],
-                                    shiftCode: "A1",
-                                    workplaceCode: "WP1",
-                                    weeks: [1],
-                                    dayOfWeek: 5
-                                },
-                                {
-                                    employeeCodes: ["DD"],
-                                    shiftCode: "N",
-                                    workPlaceCode: "WP1",
-                                    weeks: [2],
-                                    dayOfWeek: 4
-                                },
-                                {
-                                    employeeCodes: ["DD"],
-                                    shiftCode: "N",
-                                    workPlaceCode: "WP1",
-                                    weeks: [3],
-                                    dayOfWeek: 7
-                                },
-                                {
-                                    employeeCodes: ["PP"],
-                                    shiftCode: "Q1",
-                                    workPlaceCode: "WP1",
-                                    weeks: [1],
-                                    dayOfWeek: 1
-                                },
-                                {
-                                    employeeCodes: ["EE"],
-                                    shiftCode: "C2",
-                                    workPlaceCode: "WP1",
-                                    weeks: [1],
-                                    dayOfWeek: 1
-                                },
-                                {
-                                    employeeCodes: ["EE"],
-                                    shiftCode: "N",
-                                    workPlaceCode: "WP1",
-                                    weeks: [1],
-                                    dayOfWeek: 1
-                                },
-                                {
-                                    employeeCodes: ["EE"],
-                                    shiftCode: "N",
-                                    workPlaceCode: "WP1",
-                                    weeks: [1],
-                                    dayOfWeek: 1
-                                },
-                                {
-                                    employeeCodes: ["EE"],
-                                    shiftCode: "N",
-                                    workPlaceCode: "WP1",
-                                    weeks: [3],
-                                    dayOfWeek: 1
-                                },
-                                {
-                                    employeeCodes: ["EE"],
-                                    shiftCode: "A1",
-                                    workPlaceCode: "WP1",
-                                    weeks: [3],
-                                    dayOfWeek: 2
-                                },
-                                {
-                                    employeeCodes: ["EE"],
-                                    shiftCode: "C2",
-                                    workPlaceCode: "WP1",
-                                    weeks: [3],
-                                    dayOfWeek: 2
-                                },
-                                {
-                                    employeeCodes: ["EE"],
-                                    shiftCode: "N",
-                                    workPlaceCode: "WP1",
-                                    weeks: [3],
-                                    dayOfWeek: 2
-                                }
-                            ]
+                            code: "A1", //07:00-16:00
+                            startTime: 420,
+                            endTime: 960
                         },
                         {
-                            name: "Schema 2",
-                            numberOfWeeks: 1,
-                            employeesCodes: ["AA", "BB"],
-                            shiftDefinitions: [
-                                {
-                                    code: "A1",
-                                    startTime: 420,
-                                    endTime: 960
-                                }
-                            ]
+                            code: "A2",
+                            startTime: 420,
+                            endTime: 930
+                        },
+                        {
+                            code: "C1", //10:30-21:15
+                            startTime: 630,
+                            endTime: 1275
+                        },
+                        {
+                            code: "C2", //11-21
+                            startTime: 660,
+                            endTime: 1275
+                        },
+                        {
+                            code: "N", //21:00-07:15
+                            startTime: 1260,
+                            endTime: 435
+                        },
+                        {
+                            code: "Q1", //06:00-09:20
+                            startTime: 360,
+                            endTime: 560
                         }
-                    ];
+                    ],
+                    shifts: [
+                        {
+                            employeeCodes: ["CC"],
+                            shiftCode: "A1",
+                            workplaceCode: "WP1",
+                            weeks: [1,2],
+                            dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: ["AA", "BB"],
+                            shiftCode: "C1",
+                            workplaceCode: "WP2",
+                            weeks: [1,2],
+                            dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: [],
+                            shiftCode: "A1",
+                            workplaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 5
+                        },
+                        {
+                            employeeCodes: ["DD"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [2],
+                            dayOfWeek: 4
+                        },
+                        {
+                            employeeCodes: ["DD"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [3],
+                            dayOfWeek: 7
+                        },
+                        {
+                            employeeCodes: ["PP"],
+                            shiftCode: "Q1",
+                            workPlaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "C2",
+                            workPlaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [4],
+                            dayOfWeek: 7
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [1],
+                            dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [3],
+                            dayOfWeek: 1
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "A1",
+                            workPlaceCode: "WP1",
+                            weeks: [3],
+                            dayOfWeek: 2
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "C2",
+                            workPlaceCode: "WP1",
+                            weeks: [3],
+                            dayOfWeek: 2
+                        },
+                        {
+                            employeeCodes: ["EE"],
+                            shiftCode: "N",
+                            workPlaceCode: "WP1",
+                            weeks: [3],
+                            dayOfWeek: 2
+                        }
+                    ]
+                },
+                {
+                    name: "Testschema 2",
+                    numberOfWeeks: 3,
+                    employeesCodes: ["AA", "BB"],
+                    shiftDefinitions: [
+                        {
+                            code: "A1",
+                            startTime: 420,
+                            endTime: 960
+                        }
+                    ]
+                },
+                {
+                    name: "Tomt 1v-schema",
+                    numberOfWeeks: 1,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 2v-schema",
+                    numberOfWeeks: 2,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 3v-schema",
+                    numberOfWeeks: 3,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 4v-schema",
+                    numberOfWeeks: 4,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 5v-schema",
+                    numberOfWeeks: 5,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 6v-schema",
+                    numberOfWeeks: 6,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 7v-schema",
+                    numberOfWeeks: 7,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 8v-schema",
+                    numberOfWeeks: 8,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 9v-schema",
+                    numberOfWeeks: 9,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 10v-schema",
+                    numberOfWeeks: 10,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 11v-schema",
+                    numberOfWeeks: 11,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 12v-schema",
+                    numberOfWeeks: 12,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 13v-schema",
+                    numberOfWeeks: 13,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 14v-schema",
+                    numberOfWeeks: 14,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 15v-schema",
+                    numberOfWeeks: 15,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                },
+                {
+                    name: "Tomt 16v-schema",
+                    numberOfWeeks: 16,
+                    employeesCodes: [],
+                    shiftDefinitions: []
+                }
+            ];
             var employeesData = [
                 {
                     code: "AA",
@@ -1119,6 +1217,7 @@
                 loadSchedule: function(e) {
                     var scheduleReference = this.$.scheduleSelector.selected;
                     this.populateSchedule(scheduleReference);
+                    this.domReady(); //temporary!
                     this.schedule.updateEmployees();
                     this.$.loadScheduleDialog.close();
                 },
@@ -1216,10 +1315,10 @@
                 pxWeekHeight: 0,
                 schedule: {},
                 ready: function () {
-                    this.populateSchedule("Schema 1"); //pick first for now
+                    this.populateSchedule("Tomt 4v-schema");
                 },
                 domReady: function() {
-                    this.scheduleNames = ["Schema 1", "Schema 2", "Granvägen 14, Sommarschema -15", "Granvägen 14, Huvudschema oktober -14"];
+                    this.scheduleNames = ["Tomt 1v-schema", "Tomt 2v-schema", "Tomt 3v-schema", "Tomt 4v-schema", "Tomt 5v-schema", "Tomt 6v-schema", "Tomt 7v-schema", "Tomt 8v-schema", "Tomt 9v-schema", "Tomt 10v-schema", "Tomt 11v-schema", "Tomt 12v-schema", "Tomt 13v-schema", "Tomt 14v-schema", "Tomt 15v-schema", "Tomt 16v-schema", "Testschema 1", "Testschema 2"];
                     var numWeeks = this.schedule.numberOfWeeks;
                     var height = this.$.scheduleContainer.offsetHeight - 90;
                     var width = this.$.scheduleContainer.offsetWidth - 70;
