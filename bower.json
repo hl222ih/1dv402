@@ -1,0 +1,33 @@
+{
+  "name": "hl222ih/1dv42e",
+  "version": "0.0.1",
+  "homepage": "https://github.com/hl222ih/1dv402",
+  "authors": [
+    "hl222ih <hl222ih@student.lnu.se>"
+  ],
+  "description": "scheduling application",
+  "moduleType": [
+    "es6"
+  ],
+  "keywords": [
+    "scheduling",
+    "tools"
+  ],
+  "license": "proprietary",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "core-elements": "Polymer/core-elements#~0.5.5",
+    "paper-color-picker": "David-Mulder/paper-color-picker",
+    "observe-js": "Polymer/observe-js#~0.5.5",
+    "paper-dialog": "Polymer/paper-dialog#0.5",
+    "paper-icon-button": "Polymer/paper-icon-button#~0.5.5",
+    "paper-slider": "Polymer/paper-slider#~0.5.5",
+    "svg.js": "~1.0.1"
+  }
+}
